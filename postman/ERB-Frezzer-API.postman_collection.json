@@ -1,0 +1,1313 @@
+{
+	"info": {
+		"_postman_id": "erb-frezzer-api-v1",
+		"name": "ERB Frezzer API v1",
+		"description": "FrostParts ERP — Laravel Sanctum API.\n\n**Admin (from DatabaseSeeder):**\n- Email: `admin@example.com`\n- Password: `password`\n\nRun **Auth → Login** first; the collection saves `token` automatically.\n\nRequires `php artisan db:seed` (or migrate:fresh --seed) on the target environment.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://127.0.0.1:8000/api/v1"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "branchId",
+			"value": ""
+		},
+		{
+			"key": "partId",
+			"value": ""
+		},
+		{
+			"key": "customerId",
+			"value": ""
+		},
+		{
+			"key": "supplierId",
+			"value": ""
+		},
+		{
+			"key": "invoiceId",
+			"value": ""
+		},
+		{
+			"key": "transferId",
+			"value": ""
+		},
+		{
+			"key": "purchaseId",
+			"value": ""
+		},
+		{
+			"key": "installmentId",
+			"value": ""
+		},
+		{
+			"key": "settlementId",
+			"value": ""
+		},
+		{
+			"key": "returnId",
+			"value": ""
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login (admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.collectionVariables.set('token', body.token);",
+									"    console.log('Token saved. User:', body.user?.email);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": "{{baseUrl}}/auth/login"
+					}
+				},
+				{
+					"name": "Me",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/auth/me"
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/auth/logout"
+					}
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/health"
+					}
+				}
+			]
+		},
+		{
+			"name": "Branches",
+			"item": [
+				{
+					"name": "List branches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/branches?per_page=25"
+					}
+				},
+				{
+					"name": "Create branch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Warehouse Branch\",\n  \"address\": \"Cairo\",\n  \"phone\": \"0100000001\",\n  \"is_active\": true\n}"
+						},
+						"url": "{{baseUrl}}/branches"
+					}
+				},
+				{
+					"name": "Show branch",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/branches/{{branchId}}"
+					}
+				},
+				{
+					"name": "Update branch",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Main Branch Updated\",\n  \"is_active\": true\n}"
+						},
+						"url": "{{baseUrl}}/branches/{{branchId}}"
+					}
+				},
+				{
+					"name": "Delete branch (soft)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/branches/{{branchId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Parts",
+			"item": [
+				{
+					"name": "List parts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/parts?per_page=25"
+					}
+				},
+				{
+					"name": "Create part",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"P-001\",\n  \"name\": \"Compressor Unit\",\n  \"category\": \"Compressor\",\n  \"unit\": \"pc\",\n  \"sell_price\": 150,\n  \"cost_price\": 80,\n  \"min_stock\": 5,\n  \"is_active\": true\n}"
+						},
+						"url": "{{baseUrl}}/parts"
+					}
+				},
+				{
+					"name": "Show part",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/parts/{{partId}}"
+					}
+				},
+				{
+					"name": "Update part",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sell_price\": 160,\n  \"min_stock\": 10\n}"
+						},
+						"url": "{{baseUrl}}/parts/{{partId}}"
+					}
+				},
+				{
+					"name": "Delete part (soft)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/parts/{{partId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Inventory",
+			"item": [
+				{
+					"name": "List inventory",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/inventory?per_page=50"
+					}
+				},
+				{
+					"name": "Low stock",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/inventory/low-stock"
+					}
+				},
+				{
+					"name": "Inventory by branch",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/inventory/{{branchId}}"
+					}
+				},
+				{
+					"name": "Adjust stock",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"part_id\": \"{{partId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"quantity_delta\": 50,\n  \"reason\": \"Initial stock\"\n}"
+						},
+						"url": "{{baseUrl}}/inventory/adjust"
+					}
+				}
+			]
+		},
+		{
+			"name": "Transfers",
+			"item": [
+				{
+					"name": "List transfers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/transfers?per_page=25"
+					}
+				},
+				{
+					"name": "Create transfer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"from_branch_id\": \"{{branchId}}\",\n  \"to_branch_id\": \"{{branchId}}\",\n  \"notes\": \"Transfer notes\",\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 2 }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/transfers"
+					}
+				},
+				{
+					"name": "Show transfer",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/transfers/{{transferId}}"
+					}
+				},
+				{
+					"name": "Complete transfer",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/transfers/{{transferId}}/complete"
+					}
+				},
+				{
+					"name": "Cancel transfer",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/transfers/{{transferId}}/cancel"
+					}
+				}
+			]
+		},
+		{
+			"name": "Customers",
+			"item": [
+				{
+					"name": "List customers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/customers?per_page=25"
+					}
+				},
+				{
+					"name": "Create customer (credit)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Credit Customer\",\n  \"type\": \"credit\",\n  \"phone\": \"01011111111\",\n  \"credit_limit\": 10000\n}"
+						},
+						"url": "{{baseUrl}}/customers"
+					}
+				},
+				{
+					"name": "Create customer (cash)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Cash Customer\",\n  \"type\": \"cash\",\n  \"phone\": \"01022222222\"\n}"
+						},
+						"url": "{{baseUrl}}/customers"
+					}
+				},
+				{
+					"name": "Show customer",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/customers/{{customerId}}"
+					}
+				},
+				{
+					"name": "Update customer",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Customer Renamed\"\n}"
+						},
+						"url": "{{baseUrl}}/customers/{{customerId}}"
+					}
+				},
+				{
+					"name": "Customer invoices",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/customers/{{customerId}}/invoices"
+					}
+				},
+				{
+					"name": "Customer balance",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/customers/{{customerId}}/balance"
+					}
+				},
+				{
+					"name": "Delete customer (soft)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/customers/{{customerId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Invoices",
+			"item": [
+				{
+					"name": "List invoices",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/invoices?per_page=25"
+					}
+				},
+				{
+					"name": "Pending credit invoices",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/invoices/pending-credit"
+					}
+				},
+				{
+					"name": "Create invoice (cash)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"payment_type\": \"cash\",\n  \"discount\": 0,\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 1 }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/invoices"
+					}
+				},
+				{
+					"name": "Create invoice (credit)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"payment_type\": \"credit\",\n  \"discount\": 0,\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 1 }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/invoices"
+					}
+				},
+				{
+					"name": "Show invoice",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/invoices/{{invoiceId}}"
+					}
+				},
+				{
+					"name": "Cancel invoice",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/invoices/{{invoiceId}}/cancel"
+					}
+				}
+			]
+		},
+		{
+			"name": "Settlements",
+			"item": [
+				{
+					"name": "List settlements",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/settlements?per_page=25"
+					}
+				},
+				{
+					"name": "Upcoming settlements",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/settlements/upcoming"
+					}
+				},
+				{
+					"name": "Create settlement",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"settlement_date\": \"2026-05-17\",\n  \"payment_method\": \"cash\",\n  \"notes\": \"Saturday settlement\"\n}"
+						},
+						"url": "{{baseUrl}}/settlements"
+					}
+				},
+				{
+					"name": "Show settlement",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/settlements/{{settlementId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Suppliers",
+			"item": [
+				{
+					"name": "List suppliers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/suppliers?per_page=25"
+					}
+				},
+				{
+					"name": "Create supplier",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Parts Supplier Co\",\n  \"contact_person\": \"Ahmed\",\n  \"phone\": \"01033333333\",\n  \"address\": \"Cairo\"\n}"
+						},
+						"url": "{{baseUrl}}/suppliers"
+					}
+				},
+				{
+					"name": "Show supplier",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/suppliers/{{supplierId}}"
+					}
+				},
+				{
+					"name": "Supplier debt",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/suppliers/{{supplierId}}/debt"
+					}
+				},
+				{
+					"name": "Update supplier",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Supplier Renamed\"\n}"
+						},
+						"url": "{{baseUrl}}/suppliers/{{supplierId}}"
+					}
+				},
+				{
+					"name": "Delete supplier (soft)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/suppliers/{{supplierId}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Purchases",
+			"item": [
+				{
+					"name": "List purchases",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/purchases?per_page=25"
+					}
+				},
+				{
+					"name": "Create purchase (immediate)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"supplier_id\": \"{{supplierId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"description\": \"Stock replenishment\",\n  \"payment_type\": \"immediate\",\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 10, \"unit_cost\": 50 }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/purchases"
+					}
+				},
+				{
+					"name": "Create purchase (installments)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"supplier_id\": \"{{supplierId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"payment_type\": \"installments\",\n  \"installment_count\": 3,\n  \"installment_start_date\": \"2026-06-01\",\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 5, \"unit_cost\": 100 }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/purchases"
+					}
+				},
+				{
+					"name": "Show purchase",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/purchases/{{purchaseId}}"
+					}
+				},
+				{
+					"name": "Receive purchase",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/purchases/{{purchaseId}}/receive"
+					}
+				},
+				{
+					"name": "Cancel purchase",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/purchases/{{purchaseId}}/cancel"
+					}
+				}
+			]
+		},
+		{
+			"name": "Installments",
+			"item": [
+				{
+					"name": "List installments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/installments?per_page=25"
+					}
+				},
+				{
+					"name": "Overdue installments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/installments/overdue"
+					}
+				},
+				{
+					"name": "Pay installment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"payment_method\": \"cash\",\n  \"notes\": \"Paid in full\"\n}"
+						},
+						"url": "{{baseUrl}}/installments/{{installmentId}}/pay"
+					}
+				}
+			]
+		},
+		{
+			"name": "Returns",
+			"item": [
+				{
+					"name": "List returns",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/returns?per_page=25"
+					}
+				},
+				{
+					"name": "Create return (customer)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"return_type\": \"customer_return\",\n  \"reference_id\": \"{{invoiceId}}\",\n  \"reference_type\": \"invoice\",\n  \"customer_id\": \"{{customerId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"reason\": \"Defective unit\",\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 1, \"unit_price\": 50, \"condition\": \"defective\" }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/returns"
+					}
+				},
+				{
+					"name": "Show return",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/returns/{{returnId}}"
+					}
+				},
+				{
+					"name": "Approve return",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"resolution\": \"restock\"\n}"
+						},
+						"url": "{{baseUrl}}/returns/{{returnId}}/approve"
+					}
+				},
+				{
+					"name": "Reject return",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Outside return window\"\n}"
+						},
+						"url": "{{baseUrl}}/returns/{{returnId}}/reject"
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/dashboard/summary"
+					}
+				},
+				{
+					"name": "Inventory",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/dashboard/inventory"
+					}
+				},
+				{
+					"name": "Receivables",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/dashboard/receivables"
+					}
+				},
+				{
+					"name": "Payables",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/dashboard/payables"
+					}
+				},
+				{
+					"name": "Sales",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/dashboard/sales"
+					}
+				},
+				{
+					"name": "Activity",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/dashboard/activity"
+					}
+				}
+			]
+		},
+		{
+			"name": "Reports",
+			"item": [
+				{
+					"name": "Sales report",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/reports/sales?from=2026-01-01&to=2026-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"reports",
+								"sales"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "to",
+									"value": "2026-12-31"
+								},
+								{
+									"key": "branch_id",
+									"value": "{{branchId}}",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Inventory valuation",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/reports/inventory"
+					}
+				},
+				{
+					"name": "Customer aging",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/reports/customers"
+					}
+				},
+				{
+					"name": "Supplier debt aging",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/reports/suppliers"
+					}
+				},
+				{
+					"name": "Returns summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/reports/returns?from=2026-01-01&to=2026-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"reports",
+								"returns"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "to",
+									"value": "2026-12-31"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

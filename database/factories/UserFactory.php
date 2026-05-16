@@ -25,9 +25,11 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $suffix = Str::lower(Str::random(8));
+
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'name' => $this->fakerName(),
+            'email' => $this->fakerEmail($suffix),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -45,5 +47,28 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    private function fakerName(): string
+    {
+        if (function_exists('fake')) {
+            return fake()->name();
+        }
+
+        return 'User '.$this->fakerSuffix();
+    }
+
+    private function fakerEmail(string $suffix): string
+    {
+        if (function_exists('fake')) {
+            return fake()->unique()->safeEmail();
+        }
+
+        return "user-{$suffix}@example.com";
+    }
+
+    private function fakerSuffix(): string
+    {
+        return Str::lower(Str::random(8));
     }
 }
