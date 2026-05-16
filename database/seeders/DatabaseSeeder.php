@@ -26,5 +26,7 @@ class DatabaseSeeder extends Seeder
             'branch_id' => null,
             'is_active' => true,
         ]);
+
+        $this->call(PassportClientSeeder::class);
     }
 }

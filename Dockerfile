@@ -15,16 +15,16 @@
 #
 #   php artisan config:cache && php artisan route:cache && php artisan view:cache
 #
-# Laravel Sanctum (this repo): migrations include personal_access_tokens.
-# Publish custom config only if needed:
-#   php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+# Laravel Passport (OAuth2) — required on each new deploy / container:
 #
-# Laravel Passport ONLY if you add OAuth2 / password grant (not bundled here):
-#
-#   composer require laravel/passport
 #   php artisan migrate --force
 #   php artisan passport:keys --force
-#   php artisan passport:install --force
+#   php artisan db:seed --class=Database\\Seeders\\PassportClientSeeder --force
+#
+# Password-grant token (standard OAuth2):
+#   POST /oauth/token  (grant_type=password, client_id, client_secret, username, password)
+#
+# Or use POST /api/v1/auth/login (issues a Passport personal access token).
 #
 # Optional on container boot: set env RUN_MIGRATIONS=true to run migrate automatically.
 #
@@ -93,6 +93,13 @@ RUN composer install \
         --no-scripts
 
 RUN composer dump-autoload --optimize --no-dev --no-interaction --quiet
+
+# Laravel Passport — OAuth2 signing keys (storage/oauth-private.key, oauth-public.key).
+# Requires APP_KEY so Artisan can boot; runtime APP_KEY from .env still applies to the app.
+RUN cp .env.example .env \
+ && php artisan key:generate --force --no-interaction \
+ && php artisan passport:keys --force --no-interaction \
+ && chown -R www-data:www-data storage bootstrap/cache
 
 ENTRYPOINT ["docker-laravel-entrypoint"]
 EXPOSE 80

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
@@ -38,7 +39,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $login->assertOk();
         $token = (string) $login->json('token');
         $this->assertNotSame('', $token);
-        $this->assertDatabaseCount('personal_access_tokens', 1);
+        $this->assertDatabaseCount('oauth_access_tokens', 1);
 
         $auth = fn () => $this->withToken($token);
 
@@ -332,6 +333,10 @@ class ApiV1EndpointsSmokeTest extends TestCase
             'Accept' => 'application/json',
         ])->assertOk();
 
-        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertDatabaseCount('oauth_access_tokens', 1);
+        $this->assertTrue(
+            (bool) DB::table('oauth_access_tokens')->value('revoked'),
+            'Access token should be revoked after logout.'
+        );
     }
 }

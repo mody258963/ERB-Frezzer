@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -35,22 +34,19 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('flutter')->plainTextToken;
+        $tokenResult = $user->createToken('flutter');
 
         return response()->json([
-            'token' => $token,
-            'token_type' => 'Bearer',
+            'token' => $tokenResult->accessToken,
+            'token_type' => $tokenResult->tokenType ?? 'Bearer',
+            'expires_in' => $tokenResult->expiresIn ?? null,
             'user' => (new UserResource($user))->resolve(),
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $bearer = (string) $request->bearerToken();
-        if ($bearer !== '') {
-            $token = PersonalAccessToken::findToken($bearer);
-            $token?->delete();
-        }
+        $request->user()?->currentAccessToken()?->revoke();
 
         return (new MessageResource(['message' => 'Logged out.']))->response();
     }

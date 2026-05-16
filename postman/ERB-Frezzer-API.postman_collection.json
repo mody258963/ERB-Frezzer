@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "erb-frezzer-api-v1",
 		"name": "ERB Frezzer API v1",
-		"description": "FrostParts ERP — Laravel Sanctum API.\n\n**Admin (from DatabaseSeeder):**\n- Email: `admin@example.com`\n- Password: `password`\n\nRun **Auth → Login** first; the collection saves `token` automatically.\n\nRequires `php artisan db:seed` (or migrate:fresh --seed) on the target environment.",
+		"description": "FrostParts ERP — Laravel Passport (OAuth2).\n\n**Admin (DatabaseSeeder):** `admin@example.com` / `password`\n\n**Option A — API login:** Auth → Login (personal access token)\n**Option B — OAuth2 password grant:** Auth → OAuth Token (password)\n\nDeploy: `php artisan passport:keys --force` and `PassportClientSeeder` before first login.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -22,6 +22,18 @@
 		},
 		{
 			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "oauthUrl",
+			"value": "http://127.0.0.1:8000/oauth/token"
+		},
+		{
+			"key": "passwordClientId",
+			"value": ""
+		},
+		{
+			"key": "passwordClientSecret",
 			"value": ""
 		},
 		{
@@ -106,6 +118,70 @@
 							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}"
 						},
 						"url": "{{baseUrl}}/auth/login"
+					}
+				},
+				{
+					"name": "OAuth Token (password grant)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.collectionVariables.set('token', body.access_token);",
+									"    console.log('OAuth access_token saved.');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "client_id",
+									"value": "{{passwordClientId}}"
+								},
+								{
+									"key": "client_secret",
+									"value": "{{passwordClientSecret}}"
+								},
+								{
+									"key": "username",
+									"value": "admin@example.com"
+								},
+								{
+									"key": "password",
+									"value": "password"
+								},
+								{
+									"key": "scope",
+									"value": "*"
+								}
+							]
+						},
+						"url": "{{oauthUrl}}"
 					}
 				},
 				{

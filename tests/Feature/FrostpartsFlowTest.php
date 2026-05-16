@@ -54,7 +54,7 @@ class FrostpartsFlowTest extends TestCase
 
         $user = User::factory()->create();
 
-        $response = $this->withToken($user->createToken('t')->plainTextToken)->postJson('/api/v1/invoices', [
+        $response = $this->withToken($user->createToken('t')->accessToken)->postJson('/api/v1/invoices', [
             'customer_id' => $customer->id,
             'branch_id' => $branch->id,
             'payment_type' => 'cash',
@@ -88,7 +88,7 @@ class FrostpartsFlowTest extends TestCase
 
         $user = User::factory()->create();
 
-        $create = $this->withToken($user->createToken('t')->plainTextToken)->postJson('/api/v1/transfers', [
+        $create = $this->withToken($user->createToken('t')->accessToken)->postJson('/api/v1/transfers', [
             'from_branch_id' => $b1->id,
             'to_branch_id' => $b2->id,
             'items' => [
@@ -99,7 +99,7 @@ class FrostpartsFlowTest extends TestCase
         $create->assertCreated();
         $id = $create->json('id');
 
-        $this->withToken($user->createToken('t2')->plainTextToken)
+        $this->withToken($user->createToken('t2')->accessToken)
             ->patchJson('/api/v1/transfers/'.$id.'/complete')
             ->assertOk();
 
@@ -132,7 +132,7 @@ class FrostpartsFlowTest extends TestCase
 
         $user = User::factory()->create();
 
-        $poResp = $this->withToken($user->createToken('t')->plainTextToken)->postJson('/api/v1/purchases', [
+        $poResp = $this->withToken($user->createToken('t')->accessToken)->postJson('/api/v1/purchases', [
             'supplier_id' => $supplier->id,
             'branch_id' => $branch->id,
             'payment_type' => 'immediate',
@@ -147,7 +147,7 @@ class FrostpartsFlowTest extends TestCase
 
         $instId = $poResp->json('installments.0.id');
 
-        $this->withToken($user->createToken('t2')->plainTextToken)->postJson('/api/v1/installments/'.$instId.'/pay', [
+        $this->withToken($user->createToken('t2')->accessToken)->postJson('/api/v1/installments/'.$instId.'/pay', [
             'payment_method' => 'cash',
         ])->assertOk();
 
