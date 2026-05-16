@@ -1,6 +1,24 @@
 #!/bin/sh
 set -e
 
+# Dokploy / Docker often inject APP_KEY="" which overrides .env and breaks encryption.
+ensure_app_key() {
+    case "${APP_KEY:-}" in
+        ''|'base64:') unset APP_KEY ;;
+    esac
+
+    if [ ! -f .env ]; then
+        cp .env.example .env
+    fi
+
+    if ! grep -qE '^APP_KEY=base64:[A-Za-z0-9+/=]+$' .env 2>/dev/null; then
+        php artisan key:generate --force --no-interaction
+    fi
+
+    chown www-data:www-data .env 2>/dev/null || true
+    chmod 664 .env 2>/dev/null || true
+}
+
 fix_storage_permissions() {
     mkdir -p \
         storage/framework/cache/data \
@@ -32,6 +50,8 @@ fix_storage_permissions() {
         chown www-data:www-data storage/oauth-public.key
     fi
 }
+
+ensure_app_key
 
 if [ ! -f storage/oauth-private.key ]; then
     php artisan passport:keys --force --no-interaction

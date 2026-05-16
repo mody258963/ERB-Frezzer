@@ -7,9 +7,12 @@
 #
 #   php artisan migrate --force
 #
-# Generate APP_KEY once if missing (.env): 
+# Set APP_KEY in Dokploy (or your orchestrator) — do not leave it blank:
 #
-#   php artisan key:generate --show   # prints a key → set APP_KEY=... in .env
+#   php artisan key:generate --show
+#
+# Copy the output into APP_KEY=base64:... in Dokploy env vars.
+# An empty APP_KEY= in Dokploy overrides the image .env and causes MissingAppKeyException.
 #
 # Cache for production traffic (after .env exists):
 #
