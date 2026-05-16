@@ -2,24 +2,29 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
+use App\Models\Branch;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        Branch::query()->create([
+            'name' => 'Main Branch',
+            'address' => 'Cairo',
+            'phone' => '0100000000',
+            'is_active' => true,
+        ]);
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
+            'password' => 'password',
+            'role' => UserRole::Admin,
+            'branch_id' => null,
+            'is_active' => true,
         ]);
     }
 }
