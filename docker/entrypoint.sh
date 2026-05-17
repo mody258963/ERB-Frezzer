@@ -33,7 +33,7 @@ fix_storage_permissions() {
         chmod 660 storage/oauth-private.key
     fi
     if [ -f storage/oauth-public.key ]; then
-        chmod 644 storage/oauth-public.key
+        chmod 660 storage/oauth-public.key
     fi
 
     chown -R www-data:www-data storage bootstrap/cache
@@ -46,7 +46,7 @@ fix_storage_permissions() {
         chown www-data:www-data storage/oauth-private.key
     fi
     if [ -f storage/oauth-public.key ]; then
-        chmod 644 storage/oauth-public.key
+        chmod 660 storage/oauth-public.key
         chown www-data:www-data storage/oauth-public.key
     fi
 }

@@ -103,12 +103,10 @@ RUN cp .env.example .env \
  && php artisan key:generate --force --no-interaction \
  && php artisan passport:keys --force --no-interaction \
  && touch storage/logs/laravel.log \
- && chmod 660 storage/oauth-private.key \
- && chmod 644 storage/oauth-public.key \
+ && chmod 660 storage/oauth-private.key storage/oauth-public.key \
  && chown -R www-data:www-data storage bootstrap/cache \
  && chmod -R u+rwX,g+rwX storage bootstrap/cache \
- && chmod 660 storage/oauth-private.key \
- && chmod 644 storage/oauth-public.key
+ && chmod 660 storage/oauth-private.key storage/oauth-public.key
 
 ENTRYPOINT ["docker-laravel-entrypoint"]
 EXPOSE 80
