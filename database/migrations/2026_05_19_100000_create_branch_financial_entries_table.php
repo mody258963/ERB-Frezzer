@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('branch_financial_entries')) {
+            return;
+        }
+
         Schema::create('branch_financial_entries', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('entry_number')->unique();

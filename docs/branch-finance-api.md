@@ -139,3 +139,22 @@ GET /api/v1/branch-finance/balances
 | `database/migrations/2026_05_19_100000_create_branch_financial_entries_table.php` | Schema |
 
 Run migration: `php artisan migrate`
+
+### Server recovery (table exists but migrate failed)
+
+If the first run failed with **index name too long** and `branch_financial_entries` already exists:
+
+```bash
+php artisan migrate --force
+```
+
+Deploy the latest migrations (short index names `bfe_branch_pair_status_idx`, `bfe_reference_idx`). The create migration skips when the table exists; `2026_05_19_100001_add_branch_financial_entries_indexes` adds any missing indexes.
+
+If migrate still fails, mark the create migration as done then migrate again:
+
+```sql
+INSERT INTO migrations (migration, batch)
+SELECT '2026_05_19_100000_create_branch_financial_entries_table', COALESCE(MAX(batch), 0) + 1 FROM migrations;
+```
+
+Then: `php artisan migrate --force`
