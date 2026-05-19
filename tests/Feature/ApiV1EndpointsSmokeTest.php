@@ -92,6 +92,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
 
         $auth()->getJson('/api/v1/parts')->assertOk();
         $auth()->getJson("/api/v1/parts/{$partId}")->assertOk();
+        $auth()->getJson("/api/v1/parts/{$partId}/analysis")->assertOk();
 
         $auth()->putJson("/api/v1/parts/{$discardPartId}", [
             'name' => 'Rename before delete',

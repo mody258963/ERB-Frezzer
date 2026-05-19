@@ -370,6 +370,41 @@
 					}
 				},
 				{
+					"name": "Part analysis",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/parts/{{partId}}/analysis?from=2026-01-01&to=2026-12-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["parts", "{{partId}}", "analysis"],
+							"query": [
+								{
+									"key": "from",
+									"value": "2026-01-01",
+									"description": "Optional start date (Y-m-d)"
+								},
+								{
+									"key": "to",
+									"value": "2026-12-31",
+									"description": "Optional end date (Y-m-d)"
+								},
+								{
+									"key": "branch_id",
+									"value": "{{branchId}}",
+									"description": "Optional; branch-scoped users ignore this",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
 					"name": "Update part",
 					"request": {
 						"method": "PUT",

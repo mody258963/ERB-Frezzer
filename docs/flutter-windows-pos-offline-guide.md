@@ -173,6 +173,7 @@ Fields: email, password, API base URL (settings). Store token in `flutter_secure
 |--------|-------|-----|
 | List + search | `/parts` | `GET /parts?search=&per_page=` |
 | Detail | `/parts/:id` | `GET /parts/:id` |
+| **Analysis** | `/parts/:id/analysis` | `GET /parts/:id/analysis` — see [part-analysis-api.md](./part-analysis-api.md) |
 | Create / Edit | `/parts/new`, `/parts/:id/edit` | `POST`, `PUT /parts/:id` |
 | Delete | | `DELETE /parts/:id` (admin) |
 
@@ -483,7 +484,7 @@ Base: `{apiBase}/api/v1` — e.g. `https://host/api/v1`
 | Health | `GET /health` |
 | Auth | `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` |
 | Branches | `GET/POST /branches`, `GET/PUT/DELETE /branches/{id}` |
-| Parts | `GET/POST /parts`, `GET/PUT/DELETE /parts/{id}` |
+| Parts | `GET/POST /parts`, `GET/PUT/DELETE /parts/{id}`, `GET /parts/{id}/analysis` |
 | Inventory | `GET /inventory`, `GET /inventory/low-stock`, `GET /inventory/{branchId}`, `POST /inventory/adjust` |
 | Transfers | `GET/POST /transfers`, `GET /transfers/{id}`, `PATCH .../complete`, `PATCH .../cancel` |
 | Customers | `GET/POST /customers`, `GET/PUT/DELETE /customers/{id}`, `GET .../invoices`, `GET .../balance` |

@@ -34,6 +34,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/parts', [PartController::class, 'index']);
         Route::post('/parts', [PartController::class, 'store'])->middleware('role:admin,manager');
         Route::get('/parts/{id}', [PartController::class, 'show']);
+        Route::get('/parts/{id}/analysis', [PartController::class, 'analysis']);
         Route::put('/parts/{id}', [PartController::class, 'update'])->middleware('role:admin,manager');
         Route::delete('/parts/{id}', [PartController::class, 'destroy'])->middleware('role:admin');
 

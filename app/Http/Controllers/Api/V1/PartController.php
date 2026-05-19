@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PartAnalysisResource;
 use App\Http\Resources\PartResource;
 use App\Repositories\Contracts\PartRepositoryInterface;
+use App\Services\PartAnalysisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -12,7 +14,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class PartController extends Controller
 {
     public function __construct(
-        private PartRepositoryInterface $parts
+        private PartRepositoryInterface $parts,
+        private PartAnalysisService $partAnalysis,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -34,6 +37,28 @@ class PartController extends Controller
         abort_if(! $p, 404);
 
         return new PartResource($p);
+    }
+
+    public function analysis(Request $request, string $id): PartAnalysisResource
+    {
+        $p = $this->parts->find($id);
+        abort_if(! $p, 404);
+
+        $filters = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'branch_id' => ['nullable', 'uuid'],
+        ]);
+
+        return new PartAnalysisResource(
+            $this->partAnalysis->analyze(
+                $p,
+                $request->user(),
+                $filters['from'] ?? null,
+                $filters['to'] ?? null,
+                $filters['branch_id'] ?? null,
+            )
+        );
     }
 
     public function store(Request $request): JsonResponse
