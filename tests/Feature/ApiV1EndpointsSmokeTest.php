@@ -323,6 +323,9 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $auth()->getJson('/api/v1/reports/customers')->assertOk();
         $auth()->getJson('/api/v1/reports/suppliers')->assertOk();
         $auth()->getJson('/api/v1/reports/returns')->assertOk();
+        $auth()->getJson('/api/v1/reports/parts-sales-chart?year='.now()->year)->assertOk();
+        $auth()->getJson('/api/v1/branch-finance/balances')->assertOk();
+        $auth()->getJson('/api/v1/branch-finance/entries')->assertOk();
 
         $auth()->putJson("/api/v1/suppliers/{$supplierId}", ['name' => 'Smoke Supplier Ltd'])->assertOk();
 

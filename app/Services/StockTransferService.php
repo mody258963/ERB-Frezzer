@@ -17,12 +17,13 @@ class StockTransferService
         private StockTransferRepositoryInterface $transfers,
         private StockRepositoryInterface $stock,
         private StockMovementRepositoryInterface $movements,
+        private BranchFinanceService $branchFinance,
         private AuditLogService $audit,
         private DashboardCacheService $dashboardCache,
         private LowStockBroadcaster $lowStock,
     ) {}
 
-    public function complete(User $user, StockTransfer $transfer): StockTransfer
+    public function complete(User $user, StockTransfer $transfer, string $valuation = 'cost', bool $recordBranchCharge = true): StockTransfer
     {
         if ($transfer->status !== StockTransferStatus::Pending) {
             throw new \InvalidArgumentException('Transfer is not pending.');
@@ -72,6 +73,14 @@ class StockTransferService
             $transfer->status = StockTransferStatus::Completed;
             $transfer->save();
         });
+
+        if ($recordBranchCharge) {
+            $this->branchFinance->createChargeFromTransfer(
+                $user,
+                $transfer->fresh(['items.part', 'fromBranch', 'toBranch']),
+                $valuation
+            );
+        }
 
         $this->audit->record($user, 'transfer.complete', 'stock_transfer', $transfer->id, null, $transfer->fresh()->toArray());
         $this->dashboardCache->forgetSummary();

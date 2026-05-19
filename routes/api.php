@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\BranchFinanceController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -48,6 +49,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/transfers/{id}', [StockTransferController::class, 'show']);
         Route::patch('/transfers/{id}/complete', [StockTransferController::class, 'complete'])->middleware('role:admin,manager,warehouse');
         Route::patch('/transfers/{id}/cancel', [StockTransferController::class, 'cancel'])->middleware('role:admin,manager');
+
+        Route::get('/branch-finance/balances', [BranchFinanceController::class, 'balances']);
+        Route::get('/branch-finance/entries', [BranchFinanceController::class, 'index']);
+        Route::get('/branch-finance/entries/{id}', [BranchFinanceController::class, 'show']);
+        Route::post('/branch-finance/charges', [BranchFinanceController::class, 'storeCharge'])->middleware('role:admin,manager');
+        Route::post('/branch-finance/payments', [BranchFinanceController::class, 'storePayment'])->middleware('role:admin,manager');
+        Route::patch('/branch-finance/entries/{id}/settle', [BranchFinanceController::class, 'settle'])->middleware('role:admin,manager');
 
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::post('/customers', [CustomerController::class, 'store']);
@@ -106,6 +114,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/customers', [ReportController::class, 'customers']);
             Route::get('/suppliers', [ReportController::class, 'suppliers']);
             Route::get('/returns', [ReportController::class, 'returns']);
+            Route::get('/parts-sales-chart', [ReportController::class, 'partsSalesChart']);
         });
     });
 });

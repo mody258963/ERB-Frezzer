@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Repositories\Contracts\AuditLogRepositoryInterface;
+use App\Repositories\Contracts\BranchFinancialEntryRepositoryInterface;
 use App\Repositories\Contracts\BranchRepositoryInterface;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
@@ -16,6 +17,7 @@ use App\Repositories\Contracts\StockTransferRepositoryInterface;
 use App\Repositories\Contracts\SupplierInstallmentRepositoryInterface;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use App\Repositories\Eloquent\AuditLogRepository;
+use App\Repositories\Eloquent\BranchFinancialEntryRepository;
 use App\Repositories\Eloquent\BranchRepository;
 use App\Repositories\Eloquent\CustomerRepository;
 use App\Repositories\Eloquent\InvoiceRepository;
@@ -38,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AuditLogRepositoryInterface::class, AuditLogRepository::class);
         $this->app->singleton(BranchRepositoryInterface::class, BranchRepository::class);
+        $this->app->singleton(BranchFinancialEntryRepositoryInterface::class, BranchFinancialEntryRepository::class);
         $this->app->singleton(CustomerRepositoryInterface::class, CustomerRepository::class);
         $this->app->singleton(InvoiceRepositoryInterface::class, InvoiceRepository::class);
         $this->app->singleton(PartRepositoryInterface::class, PartRepository::class);

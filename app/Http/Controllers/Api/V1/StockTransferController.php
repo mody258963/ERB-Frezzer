@@ -61,9 +61,19 @@ class StockTransferController extends Controller
 
     public function complete(Request $request, string $id): StockTransferResource
     {
+        $options = $request->validate([
+            'valuation' => ['nullable', 'in:cost,sell'],
+            'record_branch_charge' => ['nullable', 'boolean'],
+        ]);
+
         $t = StockTransfer::query()->findOrFail($id);
 
-        return new StockTransferResource($this->transferService->complete($request->user(), $t));
+        return new StockTransferResource($this->transferService->complete(
+            $request->user(),
+            $t,
+            $options['valuation'] ?? 'cost',
+            $options['record_branch_charge'] ?? true,
+        ));
     }
 
     public function cancel(Request $request, string $id): JsonResponse

@@ -563,8 +563,16 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"valuation\": \"cost\",\n  \"record_branch_charge\": true\n}"
+						},
 						"url": "{{baseUrl}}/transfers/{{transferId}}/complete"
 					}
 				},
@@ -579,6 +587,57 @@
 							}
 						],
 						"url": "{{baseUrl}}/transfers/{{transferId}}/cancel"
+					}
+				}
+			]
+		},
+		{
+			"name": "Branch finance",
+			"item": [
+				{
+					"name": "Balance matrix",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{baseUrl}}/branch-finance/balances"
+					}
+				},
+				{
+					"name": "List entries",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{baseUrl}}/branch-finance/entries"
+					}
+				},
+				{
+					"name": "Create charge",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"creditor_branch_id\": \"{{branchId}}\",\n  \"debtor_branch_id\": \"{{warehouseBranchId}}\",\n  \"amount\": 1000,\n  \"description\": \"Manual charge\"\n}"
+						},
+						"url": "{{baseUrl}}/branch-finance/charges"
+					}
+				},
+				{
+					"name": "Record payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"creditor_branch_id\": \"{{branchId}}\",\n  \"debtor_branch_id\": \"{{warehouseBranchId}}\",\n  \"amount\": 500\n}"
+						},
+						"url": "{{baseUrl}}/branch-finance/payments"
 					}
 				}
 			]
@@ -1414,6 +1473,23 @@
 									"key": "to",
 									"value": "2026-12-31"
 								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Parts sales chart",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": {
+							"raw": "{{baseUrl}}/reports/parts-sales-chart?year=2026&limit=10&rank_by=units",
+							"host": ["{{baseUrl}}"],
+							"path": ["reports", "parts-sales-chart"],
+							"query": [
+								{"key": "year", "value": "2026"},
+								{"key": "limit", "value": "10"},
+								{"key": "rank_by", "value": "units"}
 							]
 						}
 					}
