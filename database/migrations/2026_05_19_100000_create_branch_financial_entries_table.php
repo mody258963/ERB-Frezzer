@@ -25,8 +25,8 @@ return new class extends Migration
             $table->foreignUuid('settled_by')->nullable()->constrained('users');
             $table->timestamps();
 
-            $table->index(['debtor_branch_id', 'creditor_branch_id', 'status']);
-            $table->index(['reference_type', 'reference_id']);
+            $table->index(['debtor_branch_id', 'creditor_branch_id', 'status'], 'bfe_branch_pair_status_idx');
+            $table->index(['reference_type', 'reference_id'], 'bfe_reference_idx');
         });
     }
 
