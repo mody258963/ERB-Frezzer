@@ -323,6 +323,22 @@
 			"name": "Parts",
 			"item": [
 				{
+					"name": "List categories",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{baseUrl}}/part-categories"
+					}
+				},
+				{
+					"name": "List unit enum options",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{baseUrl}}/part-units"
+					}
+				},
+				{
 					"name": "List parts",
 					"request": {
 						"method": "GET",
@@ -351,7 +367,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"code\": \"P-001\",\n  \"name\": \"Compressor Unit\",\n  \"category\": \"Compressor\",\n  \"unit\": \"pc\",\n  \"sell_price\": 150,\n  \"cost_price\": 80,\n  \"min_stock\": 5,\n  \"is_active\": true\n}"
+							"raw": "{\n  \"code\": \"P-001\",\n  \"name\": \"Compressor Unit\",\n  \"category_key\": \"compressor\",\n  \"unit\": \"pc\",\n  \"sell_price\": 150,\n  \"cost_price\": 80,\n  \"min_stock\": 5,\n  \"is_active\": true\n}"
 						},
 						"url": "{{baseUrl}}/parts"
 					}

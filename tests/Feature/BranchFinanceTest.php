@@ -33,7 +33,7 @@ class BranchFinanceTest extends TestCase
         $part = $this->withToken($token)->postJson('/api/v1/parts', [
             'code' => 'FIN-P1',
             'name' => 'Finance Part',
-            'category' => 'Compressor',
+            'category_key' => 'compressor',
             'unit' => 'pc',
             'sell_price' => 100,
             'cost_price' => 40,

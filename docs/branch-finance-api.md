@@ -148,7 +148,7 @@ If the first run failed with **index name too long** and `branch_financial_entri
 php artisan migrate --force
 ```
 
-Deploy the latest migrations (short index names `bfe_branch_pair_status_idx`, `bfe_reference_idx`). The create migration skips when the table exists; `2026_05_19_100001_add_branch_financial_entries_indexes` adds any missing indexes.
+Deploy migrations; `2026_05_19_100000_create_branch_financial_entries_table` creates the table with indexes `bfe_branch_pair_status_idx` and `bfe_reference_idx`.
 
 If migrate still fails, mark the create migration as done then migrate again:
 

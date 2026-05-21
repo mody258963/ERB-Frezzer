@@ -27,7 +27,7 @@ class FrostpartsFlowTest extends TestCase
         $part = Part::query()->create([
             'code' => 'P001',
             'name' => 'Part 1',
-            'category' => 'Compressor',
+            'category_key' => 'compressor',
             'unit' => 'pc',
             'sell_price' => 100,
             'cost_price' => 50,
@@ -75,7 +75,7 @@ class FrostpartsFlowTest extends TestCase
         $part = Part::query()->create([
             'code' => 'P-T',
             'name' => 'T',
-            'category' => 'Compressor',
+            'category_key' => 'compressor',
             'unit' => 'pc',
             'sell_price' => 10,
             'cost_price' => 5,
@@ -122,7 +122,7 @@ class FrostpartsFlowTest extends TestCase
         $part = Part::query()->create([
             'code' => 'PX',
             'name' => 'PX',
-            'category' => 'Compressor',
+            'category_key' => 'compressor',
             'unit' => 'pc',
             'sell_price' => 10,
             'cost_price' => 5,

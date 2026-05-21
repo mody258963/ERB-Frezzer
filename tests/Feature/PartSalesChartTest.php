@@ -26,7 +26,7 @@ class PartSalesChartTest extends TestCase
         $part = $this->withToken($token)->postJson('/api/v1/parts', [
             'code' => 'CHT-1',
             'name' => 'Chart Part A',
-            'category' => 'Compressor',
+            'category_key' => 'compressor',
             'unit' => 'pc',
             'sell_price' => 50,
             'cost_price' => 20,

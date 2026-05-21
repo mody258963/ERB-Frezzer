@@ -12,7 +12,12 @@ class PartRepository implements PartRepositoryInterface
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
         return Part::query()
-            ->when($filters['category'] ?? null, fn ($q, $c) => $q->where('category', $c))
+            ->with(['category'])
+            ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
+            ->when($filters['category'] ?? null, fn ($q, $key) => $q->whereHas(
+                'category',
+                fn ($c) => $c->where('key', $key)->orWhere('name', $key)
+            ))
             ->when($filters['search'] ?? null, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
                     ->orWhere('code', 'like', "%{$s}%");
@@ -31,7 +36,7 @@ class PartRepository implements PartRepositoryInterface
 
     public function find(string $id): ?Part
     {
-        return Part::query()->find($id);
+        return Part::query()->with(['category'])->find($id);
     }
 
     public function create(array $data): Part
@@ -43,6 +48,6 @@ class PartRepository implements PartRepositoryInterface
     {
         $part->update($data);
 
-        return $part->fresh();
+        return $part->fresh(['category']);
     }
 }

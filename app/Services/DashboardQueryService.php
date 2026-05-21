@@ -114,8 +114,9 @@ class DashboardQueryService
         $byCategory = Invoice::query()
             ->join('invoice_items', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->join('parts', 'parts.id', '=', 'invoice_items.part_id')
-            ->selectRaw('parts.category, SUM(invoice_items.total) as total')
-            ->groupBy('parts.category')
+            ->join('part_categories', 'part_categories.id', '=', 'parts.category_id')
+            ->selectRaw('part_categories.key as category_key, part_categories.name as category, SUM(invoice_items.total) as total')
+            ->groupBy('part_categories.id', 'part_categories.key', 'part_categories.name')
             ->get();
 
         $byBranch = Invoice::query()

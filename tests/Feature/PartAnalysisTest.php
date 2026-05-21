@@ -27,7 +27,7 @@ class PartAnalysisTest extends TestCase
         $part = $this->withToken($token)->postJson('/api/v1/parts', [
             'code' => 'ANL-001',
             'name' => 'Analysis Part',
-            'category' => 'Compressor',
+            'category_key' => 'compressor',
             'unit' => 'pc',
             'sell_price' => 100,
             'cost_price' => 60,

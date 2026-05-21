@@ -8,15 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('parts', function (Blueprint $table) {
+        Schema::create('part_categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('code')->unique();
+            $table->string('key', 64)->unique();
             $table->string('name');
-            $table->foreignUuid('category_id')->constrained('part_categories');
-            $table->string('unit', 32);
-            $table->decimal('sell_price', 12, 2);
-            $table->decimal('cost_price', 12, 2);
-            $table->unsignedInteger('min_stock')->default(0);
+            $table->unsignedSmallInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -24,6 +20,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('parts');
+        Schema::dropIfExists('part_categories');
     }
 };

@@ -27,6 +27,9 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $this->call(PassportClientSeeder::class);
+        $this->call([
+            PartCategorySeeder::class,
+            PassportClientSeeder::class,
+        ]);
     }
 }

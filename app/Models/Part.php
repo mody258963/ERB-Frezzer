@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
-use App\Enums\PartCategory;
+use App\Enums\PartUnit;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Part extends Model
 {
     use HasUuids;
 
     protected $fillable = [
-        'code', 'name', 'category', 'unit', 'sell_price', 'cost_price', 'min_stock', 'is_active',
+        'code', 'name', 'category_id', 'unit', 'sell_price', 'cost_price', 'min_stock', 'is_active',
     ];
 
     protected function casts(): array
@@ -21,7 +22,12 @@ class Part extends Model
             'cost_price' => 'decimal:2',
             'min_stock' => 'integer',
             'is_active' => 'boolean',
-            'category' => PartCategory::class,
+            'unit' => PartUnit::class,
         ];
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(PartCategory::class, 'category_id');
     }
 }

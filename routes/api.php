@@ -9,7 +9,9 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InstallmentController;
 use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\PartCategoryController;
 use App\Http\Controllers\Api\V1\PartController;
+use App\Http\Controllers\Api\V1\PartUnitController;
 use App\Http\Controllers\Api\V1\ProductReturnController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -31,6 +33,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/branches/{id}', [BranchController::class, 'show']);
         Route::put('/branches/{id}', [BranchController::class, 'update'])->middleware('role:admin');
         Route::delete('/branches/{id}', [BranchController::class, 'destroy'])->middleware('role:admin');
+
+        Route::get('/part-categories', [PartCategoryController::class, 'index']);
+        Route::post('/part-categories', [PartCategoryController::class, 'store'])->middleware('role:admin,manager');
+        Route::put('/part-categories/{id}', [PartCategoryController::class, 'update'])->middleware('role:admin,manager');
+        Route::delete('/part-categories/{id}', [PartCategoryController::class, 'destroy'])->middleware('role:admin');
+
+        Route::get('/part-units', [PartUnitController::class, 'index']);
 
         Route::get('/parts', [PartController::class, 'index']);
         Route::post('/parts', [PartController::class, 'store'])->middleware('role:admin,manager');

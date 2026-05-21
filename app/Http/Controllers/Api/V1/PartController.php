@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\PartUnit;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PartAnalysisResource;
 use App\Http\Resources\PartResource;
 use App\Repositories\Contracts\PartRepositoryInterface;
 use App\Services\PartAnalysisService;
+use App\Support\PartLookupResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class PartController extends Controller
 {
@@ -22,6 +25,7 @@ class PartController extends Controller
     {
         $filters = [
             'category' => $request->query('category'),
+            'category_id' => $request->query('category_id'),
             'search' => $request->query('search'),
             'low_stock' => $request->boolean('low_stock'),
         ];
@@ -66,15 +70,27 @@ class PartController extends Controller
         $data = $request->validate([
             'code' => ['required', 'string', 'max:64', 'unique:parts,code'],
             'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string'],
-            'unit' => ['required', 'string', 'max:32'],
+            'category_id' => ['nullable', 'uuid', 'exists:part_categories,id', 'required_without:category_key'],
+            'category_key' => ['nullable', 'string', 'max:64', 'required_without:category_id'],
+            'unit' => ['required', Rule::enum(PartUnit::class)],
             'sell_price' => ['required', 'numeric', 'min:0'],
             'cost_price' => ['required', 'numeric', 'min:0'],
             'min_stock' => ['required', 'integer', 'min:0'],
             'is_active' => ['boolean'],
         ]);
 
-        return (new PartResource($this->parts->create($data)))
+        $part = $this->parts->create([
+            'code' => $data['code'],
+            'name' => $data['name'],
+            'category_id' => PartLookupResolver::resolveCategoryId($data),
+            'unit' => $data['unit'],
+            'sell_price' => $data['sell_price'],
+            'cost_price' => $data['cost_price'],
+            'min_stock' => $data['min_stock'],
+            'is_active' => $data['is_active'] ?? true,
+        ]);
+
+        return (new PartResource($part->load(['category'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -87,15 +103,24 @@ class PartController extends Controller
         $data = $request->validate([
             'code' => ['sometimes', 'string', 'max:64', 'unique:parts,code,'.$id],
             'name' => ['sometimes', 'string'],
-            'category' => ['sometimes', 'string'],
-            'unit' => ['sometimes', 'string'],
+            'category_id' => ['sometimes', 'uuid', 'exists:part_categories,id'],
+            'category_key' => ['sometimes', 'string', 'max:64'],
+            'unit' => ['sometimes', Rule::enum(PartUnit::class)],
             'sell_price' => ['sometimes', 'numeric'],
             'cost_price' => ['sometimes', 'numeric'],
             'min_stock' => ['sometimes', 'integer'],
             'is_active' => ['boolean'],
         ]);
 
-        return new PartResource($this->parts->update($p, $data));
+        if (isset($data['category_id']) || isset($data['category_key'])) {
+            $data['category_id'] = PartLookupResolver::resolveCategoryId([
+                'category_id' => $data['category_id'] ?? $p->category_id,
+                'category_key' => $data['category_key'] ?? null,
+            ]);
+            unset($data['category_key']);
+        }
+
+        return new PartResource($this->parts->update($p, $data)->load(['category']));
     }
 
     public function destroy(string $id): JsonResponse

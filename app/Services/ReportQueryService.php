@@ -16,7 +16,10 @@ class ReportQueryService
             ->when($from, fn ($q) => $q->whereDate('created_at', '>=', $from))
             ->when($to, fn ($q) => $q->whereDate('created_at', '<=', $to))
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->when($category, fn ($q) => $q->whereHas('items.part', fn ($p) => $p->where('category', $category)));
+            ->when($category, fn ($q) => $q->whereHas(
+                'items.part.category',
+                fn ($c) => $c->where('key', $category)->orWhere('name', $category)
+            ));
 
         return $q->latest()->limit(5000)->get()->all();
     }

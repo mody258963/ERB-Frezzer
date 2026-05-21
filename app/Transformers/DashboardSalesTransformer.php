@@ -12,6 +12,7 @@ final class DashboardSalesTransformer
     {
         return [
             'by_category' => collect($payload['by_category'] ?? [])->map(fn ($row) => [
+                'category_key' => $row->category_key ?? null,
                 'category' => $row->category ?? null,
                 'total' => isset($row->total) ? (float) $row->total : null,
             ])->values()->all(),

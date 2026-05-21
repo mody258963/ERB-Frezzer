@@ -174,7 +174,8 @@ Fields: email, password, API base URL (settings). Store token in `flutter_secure
 | List + search | `/parts` | `GET /parts?search=&per_page=` |
 | Detail | `/parts/:id` | `GET /parts/:id` |
 | **Analysis** | `/parts/:id/analysis` | `GET /parts/:id/analysis` — see [part-analysis-api.md](./part-analysis-api.md) |
-| Create / Edit | `/parts/new`, `/parts/:id/edit` | `POST`, `PUT /parts/:id` |
+| **Add part** | `/parts/new` | `POST /parts` — see [flutter-add-part.md](./flutter-add-part.md) |
+| Edit part | `/parts/:id/edit` | `PUT /parts/:id` |
 | Delete | | `DELETE /parts/:id` (admin) |
 
 **Form fields:** `code`, `name`, `category` (enum), `unit`, `sell_price`, `cost_price`, `min_stock`, `is_active`.

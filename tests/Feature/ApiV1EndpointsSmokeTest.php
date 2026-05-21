@@ -67,7 +67,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $primaryPart = $auth()->postJson('/api/v1/parts', [
             'code' => 'SMK-P1',
             'name' => 'Smoke primary part',
-            'category' => 'Compressor',
+            'category_key' => 'compressor',
             'unit' => 'pc',
             'sell_price' => 49.99,
             'cost_price' => 20,
@@ -80,7 +80,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $discardPart = $auth()->postJson('/api/v1/parts', [
             'code' => 'SMK-DEL',
             'name' => 'Delete-only part',
-            'category' => 'Seals',
+            'category_key' => 'seals',
             'unit' => 'pc',
             'sell_price' => 1,
             'cost_price' => 1,
@@ -90,6 +90,8 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $discardPart->assertCreated();
         $discardPartId = (string) $discardPart->json('id');
 
+        $auth()->getJson('/api/v1/part-categories')->assertOk();
+        $auth()->getJson('/api/v1/part-units')->assertOk();
         $auth()->getJson('/api/v1/parts')->assertOk();
         $auth()->getJson("/api/v1/parts/{$partId}")->assertOk();
         $auth()->getJson("/api/v1/parts/{$partId}/analysis")->assertOk();

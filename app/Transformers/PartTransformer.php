@@ -14,12 +14,13 @@ final class PartTransformer
      */
     public static function transform(Part $part): array
     {
-        return [
+        $data = [
             'id' => $part->id,
             'code' => $part->code,
             'name' => $part->name,
-            'category' => self::enumValue($part->category),
-            'unit' => $part->unit,
+            'category_id' => $part->category_id,
+            'unit' => self::enumValue($part->unit),
+            'unit_label' => $part->unit?->label(),
             'sell_price' => (float) $part->sell_price,
             'cost_price' => (float) $part->cost_price,
             'min_stock' => (int) $part->min_stock,
@@ -27,5 +28,13 @@ final class PartTransformer
             'created_at' => $part->created_at?->toISOString(),
             'updated_at' => $part->updated_at?->toISOString(),
         ];
+
+        if ($part->relationLoaded('category') && $part->category) {
+            $data['category'] = PartCategoryTransformer::transform($part->category);
+            $data['category_key'] = $part->category->key;
+            $data['category_name'] = $part->category->name;
+        }
+
+        return $data;
     }
 }
