@@ -59,6 +59,14 @@ fi
 
 fix_storage_permissions
 
+mkdir -p storage/app/public/parts
+chown -R www-data:www-data storage/app/public 2>/dev/null || true
+chmod -R 775 storage/app/public 2>/dev/null || true
+
+if [ ! -L public/storage ]; then
+    php artisan storage:link --no-interaction
+fi
+
 if [ "${RUN_MIGRATIONS:-}" = "true" ]; then
     php artisan migrate --force --no-interaction
     php artisan db:seed --class=Database\\Seeders\\PassportClientSeeder --force --no-interaction

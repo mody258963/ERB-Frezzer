@@ -45,6 +45,10 @@
 			"value": ""
 		},
 		{
+			"key": "categoryId",
+			"value": ""
+		},
+		{
 			"key": "customerId",
 			"value": ""
 		},
@@ -331,6 +335,57 @@
 					}
 				},
 				{
+					"name": "List categories (incl. inactive)",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": {
+							"raw": "{{baseUrl}}/part-categories?active_only=false",
+							"host": ["{{baseUrl}}"],
+							"path": ["part-categories"],
+							"query": [{"key": "active_only", "value": "false"}]
+						}
+					}
+				},
+				{
+					"name": "Create category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"key\": \"copper_tubing\",\n  \"name\": \"Copper tubing\",\n  \"sort_order\": 8,\n  \"is_active\": true\n}"
+						},
+						"url": "{{baseUrl}}/part-categories"
+					}
+				},
+				{
+					"name": "Update category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Copper tubing (updated)\",\n  \"sort_order\": 9\n}"
+						},
+						"url": "{{baseUrl}}/part-categories/{{categoryId}}"
+					}
+				},
+				{
+					"name": "Deactivate category",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{baseUrl}}/part-categories/{{categoryId}}"
+					}
+				},
+				{
 					"name": "List unit enum options",
 					"request": {
 						"method": "GET",
@@ -418,6 +473,43 @@
 								}
 							]
 						}
+					}
+				},
+				{
+					"name": "Upload part image",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"description": "JPEG, PNG, or WebP. Max 2 MB."
+								}
+							]
+						},
+						"url": "{{baseUrl}}/parts/{{partId}}/image"
+					}
+				},
+				{
+					"name": "Delete part image",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/parts/{{partId}}/image"
 					}
 				},
 				{
@@ -836,7 +928,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"payment_type\": \"cash\",\n  \"discount\": 0,\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 1 }\n  ]\n}"
+							"raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"branch_id\": \"{{branchId}}\",\n  \"payment_type\": \"cash\",\n  \"discount\": 0,\n  \"items\": [\n    { \"part_id\": \"{{partId}}\", \"quantity\": 1, \"unit_price\": 175.5 }\n  ]\n}"
 						},
 						"url": "{{baseUrl}}/invoices"
 					}

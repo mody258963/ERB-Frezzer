@@ -18,6 +18,7 @@ return new class extends Migration
             $table->decimal('cost_price', 12, 2);
             $table->unsignedInteger('min_stock')->default(0);
             $table->boolean('is_active')->default(true);
+            $table->string('image_path')->nullable();
             $table->timestamps();
         });
     }

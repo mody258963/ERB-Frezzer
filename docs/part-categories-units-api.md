@@ -80,7 +80,7 @@ POST /api/v1/parts
 
 ### Flutter
 
-See **[flutter-add-part.md](./flutter-add-part.md)** for the full add-part screen flow, Dio examples, errors, and stock step.
+See **[flutter-add-part.md](./flutter-add-part.md)** for the full add-part screen flow, Dio examples, errors, and stock step. Part images: **[part-image-api.md](./part-image-api.md)**. Manage categories in the Windows **Settings** tab: **[flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md)** §4.
 
 ---
 
@@ -89,6 +89,6 @@ See **[flutter-add-part.md](./flutter-add-part.md)** for the full add-part scree
 | Migration | Creates |
 |-----------|---------|
 | `2025_05_17_100000_create_part_categories_table` | `part_categories` |
-| `2025_05_17_100001_create_parts_table` | `parts` (`category_id` FK, `unit` string) |
+| `2025_05_17_100001_create_parts_table` | `parts` (`category_id` FK, `unit` string, `image_path` nullable) |
 
 Default categories: `database/seeders/PartCategorySeeder.php` (runs with `php artisan db:seed`).

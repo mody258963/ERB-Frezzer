@@ -12,7 +12,7 @@ class Part extends Model
     use HasUuids;
 
     protected $fillable = [
-        'code', 'name', 'category_id', 'unit', 'sell_price', 'cost_price', 'min_stock', 'is_active',
+        'code', 'name', 'category_id', 'unit', 'sell_price', 'cost_price', 'min_stock', 'is_active', 'image_path',
     ];
 
     protected function casts(): array

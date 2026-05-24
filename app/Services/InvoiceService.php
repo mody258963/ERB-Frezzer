@@ -55,7 +55,9 @@ class InvoiceService
 
             foreach ($data['items'] as $line) {
                 $part = Part::query()->lockForUpdate()->findOrFail($line['part_id']);
-                $unit = (string) $part->sell_price;
+                $unit = array_key_exists('unit_price', $line) && $line['unit_price'] !== null
+                    ? (string) $line['unit_price']
+                    : (string) $part->sell_price;
                 $lineTotal = bcmul($unit, (string) $line['quantity'], 2);
                 $subtotal = bcadd($subtotal, $lineTotal, 2);
 

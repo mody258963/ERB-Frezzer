@@ -8,6 +8,7 @@ use App\Http\Resources\PartAnalysisResource;
 use App\Http\Resources\PartResource;
 use App\Repositories\Contracts\PartRepositoryInterface;
 use App\Services\PartAnalysisService;
+use App\Services\PartImageService;
 use App\Support\PartLookupResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class PartController extends Controller
     public function __construct(
         private PartRepositoryInterface $parts,
         private PartAnalysisService $partAnalysis,
+        private PartImageService $partImages,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -130,5 +132,25 @@ class PartController extends Controller
         $this->parts->update($p, ['is_active' => false]);
 
         return response()->json(null, 204);
+    }
+
+    public function storeImage(Request $request, string $id): PartResource
+    {
+        $p = $this->parts->find($id);
+        abort_if(! $p, 404);
+
+        $data = $request->validate([
+            'image' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+        ]);
+
+        return new PartResource($this->partImages->store($p, $data['image']));
+    }
+
+    public function destroyImage(string $id): PartResource
+    {
+        $p = $this->parts->find($id);
+        abort_if(! $p, 404);
+
+        return new PartResource($this->partImages->delete($p));
     }
 }

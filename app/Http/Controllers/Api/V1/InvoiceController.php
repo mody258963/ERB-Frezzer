@@ -52,6 +52,7 @@ class InvoiceController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.part_id' => ['required', 'uuid'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $invoice = $this->invoiceService->create($request->user(), $data);

@@ -5,15 +5,23 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Part;
+use App\Models\PartCategory;
 use App\Models\Stock;
 use App\Models\Supplier;
 use App\Models\User;
+use Database\Seeders\PartCategorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class FrostpartsFlowTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(PartCategorySeeder::class);
+    }
 
     public function test_invoice_fails_when_stock_insufficient(): void
     {
@@ -27,7 +35,7 @@ class FrostpartsFlowTest extends TestCase
         $part = Part::query()->create([
             'code' => 'P001',
             'name' => 'Part 1',
-            'category_key' => 'compressor',
+            'category_id' => PartCategory::query()->where('key', 'compressor')->value('id'),
             'unit' => 'pc',
             'sell_price' => 100,
             'cost_price' => 50,
@@ -75,7 +83,7 @@ class FrostpartsFlowTest extends TestCase
         $part = Part::query()->create([
             'code' => 'P-T',
             'name' => 'T',
-            'category_key' => 'compressor',
+            'category_id' => PartCategory::query()->where('key', 'compressor')->value('id'),
             'unit' => 'pc',
             'sell_price' => 10,
             'cost_price' => 5,
@@ -122,7 +130,7 @@ class FrostpartsFlowTest extends TestCase
         $part = Part::query()->create([
             'code' => 'PX',
             'name' => 'PX',
-            'category_key' => 'compressor',
+            'category_id' => PartCategory::query()->where('key', 'compressor')->value('id'),
             'unit' => 'pc',
             'sell_price' => 10,
             'cost_price' => 5,

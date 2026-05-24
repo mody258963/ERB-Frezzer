@@ -176,9 +176,10 @@ Fields: email, password, API base URL (settings). Store token in `flutter_secure
 | **Analysis** | `/parts/:id/analysis` | `GET /parts/:id/analysis` — see [part-analysis-api.md](./part-analysis-api.md) |
 | **Add part** | `/parts/new` | `POST /parts` — see [flutter-add-part.md](./flutter-add-part.md) |
 | Edit part | `/parts/:id/edit` | `PUT /parts/:id` |
+| Part image | action on edit/detail | `POST /parts/:id/image`, `DELETE /parts/:id/image` — see [part-image-api.md](./part-image-api.md) |
 | Delete | | `DELETE /parts/:id` (admin) |
 
-**Form fields:** `code`, `name`, `category` (enum), `unit`, `sell_price`, `cost_price`, `min_stock`, `is_active`.
+**Form fields:** `code`, `name`, `category_key`, `unit`, `sell_price`, `cost_price`, `min_stock`, `is_active`, optional image upload (online only).
 
 **Part JSON shape:**
 
@@ -187,14 +188,17 @@ Fields: email, password, API base URL (settings). Store token in `flutter_secure
   "id": "uuid",
   "code": "BRK-001",
   "name": "Brake pad",
-  "category": "Compressor",
+  "category_key": "compressor",
   "unit": "pc",
   "sell_price": 150.0,
   "cost_price": 80.0,
   "min_stock": 5,
-  "is_active": true
+  "is_active": true,
+  "image_url": "https://your-server.com/storage/parts/uuid.jpg"
 }
 ```
+
+`image_url` is `null` when no image. Show a placeholder in list/detail/POS search.
 
 ---
 
@@ -283,9 +287,13 @@ Fields: email, password, API base URL (settings). Store token in `flutter_secure
   "branch_id": "uuid",
   "payment_type": "cash",
   "discount": 0,
-  "items": [{ "part_id": "uuid", "quantity": 2 }]
+  "items": [
+    { "part_id": "uuid", "quantity": 2, "unit_price": 175.5 }
+  ]
 }
 ```
+
+**Per-line price (POS override):** Each cart line defaults to the catalog `sell_price` from the synced `parts` row. The cashier may edit **unit price** for this sale only (e.g. sourced from a nearby shop). Send `unit_price` on each item when it differs from the default; omit the field to use catalog price. The server stores the value on `invoice_items` and does **not** change `parts.sell_price`.
 
 **422 stock error:**
 
@@ -304,7 +312,7 @@ Fields: email, password, API base URL (settings). Store token in `flutter_secure
 
 See **§7 Local database** for Drift tables.
 
-**POS layout (2 columns):** search/scan, cart, customer dropdown, cash/credit, discount, totals, Complete sale.
+**POS layout (2 columns):** search/scan, cart (columns: part, qty, **unit price**, line total), customer dropdown, cash/credit, discount, totals, Complete sale.
 
 ---
 
@@ -485,7 +493,7 @@ Base: `{apiBase}/api/v1` — e.g. `https://host/api/v1`
 | Health | `GET /health` |
 | Auth | `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` |
 | Branches | `GET/POST /branches`, `GET/PUT/DELETE /branches/{id}` |
-| Parts | `GET/POST /parts`, `GET/PUT/DELETE /parts/{id}`, `GET /parts/{id}/analysis` |
+| Parts | `GET/POST /parts`, `GET/PUT/DELETE /parts/{id}`, `POST/DELETE /parts/{id}/image`, `GET /parts/{id}/analysis` |
 | Inventory | `GET /inventory`, `GET /inventory/low-stock`, `GET /inventory/{branchId}`, `POST /inventory/adjust` |
 | Transfers | `GET/POST /transfers`, `GET /transfers/{id}`, `PATCH .../complete`, `PATCH .../cancel` |
 | Customers | `GET/POST /customers`, `GET/PUT/DELETE /customers/{id}`, `GET .../invoices`, `GET .../balance` |
@@ -522,7 +530,7 @@ Downloaded when online; used to search parts and check quantities on the POS scr
 Each offline sale is one row in `pending_invoices` plus line rows. When sync runs, the app sends the same JSON as an online sale; Laravel writes to MySQL (`invoices`, `invoice_items`, stock movements).
 
 ```sql
-parts (id, code, name, sell_price, is_active, synced_at);
+parts (id, code, name, sell_price, image_url, is_active, synced_at);
 stock (part_id, branch_id, quantity, PRIMARY KEY (part_id, branch_id));
 customers (id, name, type, credit_limit, outstanding_balance, is_active, synced_at);
 
@@ -545,7 +553,7 @@ app_meta (key, value);  -- last_catalog_sync, branch_id, user_id
 - `GET /inventory/{user.branch_id}` → upsert `parts` + `stock`
 - `GET /customers?per_page=500` → upsert `customers`
 
-**Offline sale:** validate stock locally → insert pending → decrement local stock → receipt with `local_id`.
+**Offline sale:** validate stock locally → insert pending (including `unit_price` per line) → decrement local stock → receipt with `local_id`. Sync body must include the same `unit_price` values as §4.8.
 
 **Sync to DB (mandatory flow):**
 
@@ -686,6 +694,9 @@ Future<bool> isOnline() async {
 | API base URL | secure / shared_preferences |
 | Last catalog sync | `app_meta` |
 | Offline cash-only (optional) | preferences — block credit payments offline |
+| **Part categories** (admin, manager) | Online CRUD — see [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md) §4 |
+
+Recent API features (POS price override, part images, categories in Settings): **[flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md)**.
 
 ---
 

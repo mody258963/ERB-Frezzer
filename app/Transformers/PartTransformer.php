@@ -3,6 +3,7 @@
 namespace App\Transformers;
 
 use App\Models\Part;
+use App\Services\PartImageService;
 use App\Transformers\Concerns\TransformsBackedEnums;
 
 final class PartTransformer
@@ -25,6 +26,7 @@ final class PartTransformer
             'cost_price' => (float) $part->cost_price,
             'min_stock' => (int) $part->min_stock,
             'is_active' => $part->is_active,
+            'image_url' => app(PartImageService::class)->url($part->image_path),
             'created_at' => $part->created_at?->toISOString(),
             'updated_at' => $part->updated_at?->toISOString(),
         ];

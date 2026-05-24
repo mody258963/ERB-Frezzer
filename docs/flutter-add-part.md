@@ -19,6 +19,10 @@ sequenceDiagram
   API-->>UI: unit enum options
   UI->>API: POST /parts
   API-->>UI: 201 + part id
+  opt User picked a photo
+    UI->>API: POST /parts/{id}/image (multipart)
+    API-->>UI: 200 + image_url
+  end
   opt Add opening stock
     UI->>API: POST /inventory/adjust
     API-->>UI: 200 OK
@@ -167,12 +171,13 @@ Authorization: Bearer <token>
   "cost_price": 80,
   "min_stock": 5,
   "is_active": true,
+  "image_url": null,
   "created_at": "2026-05-20T10:00:00.000000Z",
   "updated_at": "2026-05-20T10:00:00.000000Z"
 }
 ```
 
-Save `id` for stock adjust and navigation to part detail / analysis.
+Save `id` for stock adjust, optional image upload, and navigation to part detail / analysis.
 
 ### Errors
 
@@ -207,7 +212,61 @@ Example `422` (duplicate code):
 
 ---
 
-## 6. Flutter / Dio example
+## 6. Upload part image (optional)
+
+Requires **internet** (not queued offline). Max **2 MB**. JPEG, PNG, or WebP. See [part-image-api.md](./part-image-api.md).
+
+```http
+POST /api/v1/parts/{id}/image
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+image: <file>
+```
+
+### Dio example (Windows file picker)
+
+```dart
+import 'package:dio/dio.dart';
+
+Future<Map<String, dynamic>> uploadPartImage(String partId, String filePath) async {
+  final fileName = filePath.split(RegExp(r'[\\/]')).last;
+  final formData = FormData.fromMap({
+    'image': await MultipartFile.fromFile(
+      filePath,
+      filename: fileName,
+    ),
+  });
+
+  final response = await dio.post(
+    '/parts/$partId/image',
+    data: formData,
+    options: Options(contentType: 'multipart/form-data'),
+  );
+  return response.data as Map<String, dynamic>;
+}
+```
+
+**Client checks before upload:**
+
+- File size ≤ 2 MB (`File(path).lengthSync()`).
+- Extension `.jpg`, `.jpeg`, `.png`, `.webp`.
+
+**Display in UI:**
+
+```dart
+if (part['image_url'] != null) {
+  Image.network(part['image_url'] as String, height: 120, fit: BoxFit.cover);
+} else {
+  // placeholder icon
+}
+```
+
+**Edit part:** same endpoint to replace; `DELETE /parts/{id}/image` to remove.
+
+---
+
+## 7. Flutter / Dio example (create part)
 
 ```dart
 class PartFormData {
@@ -279,7 +338,7 @@ dio.interceptors.add(InterceptorsWrapper(
 
 ---
 
-## 7. Add opening stock (recommended)
+## 8. Add opening stock (recommended)
 
 New parts have **no stock** until you adjust inventory.
 
@@ -305,7 +364,7 @@ After adjust, refresh POS catalog sync (`GET /inventory/{branchId}`) so offline 
 
 ---
 
-## 8. Permissions & navigation
+## 9. Permissions & navigation
 
 | `user.role` | Show “Add part”? |
 |-------------|------------------|
@@ -318,7 +377,7 @@ Route example: `/parts/new` guarded by role check.
 
 ---
 
-## 9. Offline
+## 10. Offline
 
 **You cannot add a part offline.** Only **sales** are queued locally when there is no internet.
 
@@ -326,7 +385,7 @@ If the user is offline, disable **Add part** and show: *Connect to the internet 
 
 ---
 
-## 10. Optional: new category first
+## 11. Optional: new category first
 
 If the category does not exist in the dropdown:
 
@@ -344,24 +403,27 @@ POST /api/v1/part-categories
 
 ---
 
-## 11. Checklist for developers
+## 12. Checklist for developers
 
 - [ ] Login and store Bearer token  
 - [ ] `GET /part-categories` on screen open  
 - [ ] `GET /part-units` on screen open  
 - [ ] Validate required fields before submit  
 - [ ] `POST /parts` with `category_key` + `unit` (enum value)  
+- [ ] Optional `POST /parts/{id}/image` (≤ 2 MB, online only)  
 - [ ] Handle `422` / `403` / `401`  
 - [ ] Prompt to add stock via `POST /inventory/adjust`  
 - [ ] Sync catalog if POS uses offline cache  
 
 ---
 
-## 12. Related API docs
+## 13. Related API docs
 
 | Topic | Document |
 |-------|----------|
 | Categories & units | [part-categories-units-api.md](./part-categories-units-api.md) |
 | Full Windows ERP app | [flutter-windows-pos-offline-guide.md](./flutter-windows-pos-offline-guide.md) |
+| Recent updates (POS price, images, Settings categories) | [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md) |
+| Part images | [part-image-api.md](./part-image-api.md) |
 | Part analysis screen | [part-analysis-api.md](./part-analysis-api.md) |
 | Postman | `postman/ERB-Frezzer-API.postman_collection.json` → **Parts** |

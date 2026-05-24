@@ -46,6 +46,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/parts/{id}', [PartController::class, 'show']);
         Route::get('/parts/{id}/analysis', [PartController::class, 'analysis']);
         Route::put('/parts/{id}', [PartController::class, 'update'])->middleware('role:admin,manager');
+        Route::post('/parts/{id}/image', [PartController::class, 'storeImage'])->middleware('role:admin,manager');
+        Route::delete('/parts/{id}/image', [PartController::class, 'destroyImage'])->middleware('role:admin,manager');
         Route::delete('/parts/{id}', [PartController::class, 'destroy'])->middleware('role:admin');
 
         Route::get('/inventory', [InventoryController::class, 'index']);
