@@ -205,28 +205,45 @@ Body: `{ "payment_method": "cash" }` (or `bank_transfer`, `check`)
 
 ---
 
-## 4. Returns — use correct approve resolution
+## 4. Returns — stock + money back on dashboard
 
 ### Problem
 
-Stock and balances did not change for some return types because the API only handled part of the resolutions. **Backend is fixed**; the app must send the right `resolution` when approving.
+- Approved returns did not always increase inventory.
+- Cash refunded to the customer did not reduce dashboard sales/profit.
 
-### Fix
+### Fix (API behaviour — refresh UI after approve)
 
 **Approve:** `PATCH /api/v1/returns/{id}/approve`
 
+| Customer item `condition` | Resolution | Stock | Money off dashboard |
+|---------------------------|------------|-------|---------------------|
+| `sellable` | `refund_cash` | ✅ +qty | ✅ `weekly_customer_refunds` |
+| `defective` | `writeoff` | ❌ scrap | ✅ refund (`total_value`) |
+| `sellable` | `credit_note` | ✅ +qty | ✅ + lower credit balance |
+| `sellable` | `restock` only | ✅ +qty | ❌ |
+
 ```json
-{ "resolution": "restock" }
+{ "resolution": "refund_cash" }
 ```
 
-| Return type | Resolution values | Effect |
-|-------------|-------------------|--------|
-| `customer_return` | `restock`, `credit_note`, `refund_cash`, `replace`, `writeoff` | `restock` / `credit_note` / `refund_cash` / `replace` → stock **in**; `credit_note` → lower customer balance; `writeoff` → no restock |
-| `supplier_return` | `supplier_credit`, `writeoff` | Stock **out** + supplier debt reduced (`supplier_credit`) |
+Defective product but full money back to customer:
 
-Show a dropdown on the approve dialog; do not approve without choosing `resolution`.
+```json
+{ "resolution": "writeoff", "items": [{ "condition": "defective", "unit_price": 120, "quantity": 1 }] }
+```
 
-After approve, refresh **inventory** for the branch if the user opens stock screens.
+**After approve (required in Flutter):**
+
+```dart
+await returnRepo.approve(id, resolution: selected);
+await inventoryRepo.refresh(branchId);
+await dashboardRepo.refreshSummary();
+```
+
+Dashboard fields: `weekly_customer_refunds`, `weekly_net_sales`, `weekly_profit`.
+
+Full Arabic guide: [customer-returns-ar.md](./customer-returns-ar.md).
 
 ---
 

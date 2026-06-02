@@ -2,8 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\ReturnResolution;
+use App\Enums\ReturnStatus;
+use App\Enums\ReturnType;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\ProductReturn;
 use App\Models\Stock;
 use App\Models\Supplier;
 use App\Models\SupplierInstallment;
@@ -29,23 +33,58 @@ class DashboardQueryService
                 ->value('v') ?? 0;
 
             $weekStart = now()->startOfWeek();
-            $weeklyRevenue = Invoice::query()
-                ->where('created_at', '>=', $weekStart)
-                ->sum('total');
+            $weekInvoices = Invoice::query()->where('created_at', '>=', $weekStart);
 
-            $weeklyProfit = Invoice::query()
+            // Gross sales (before invoice discount) — إيرادات المحل قبل الخصم
+            $weeklyRevenue = (float) ((clone $weekInvoices)->sum('subtotal'));
+            $weeklyDiscount = (float) ((clone $weekInvoices)->sum('discount'));
+            // Net collected from customers — ما يدفعه العميل
+            $weeklyNetSales = (float) ((clone $weekInvoices)->sum('total'));
+
+            $weeklyGrossProfit = (float) (Invoice::query()
                 ->join('invoice_items', 'invoice_items.invoice_id', '=', 'invoices.id')
                 ->join('parts', 'parts.id', '=', 'invoice_items.part_id')
                 ->where('invoices.created_at', '>=', $weekStart)
                 ->selectRaw('SUM((invoice_items.unit_price - parts.cost_price) * invoice_items.quantity) as p')
-                ->value('p') ?? 0;
+                ->value('p') ?? 0);
+
+            // Customer refunds (cash / defective refund / credit note) — مرتجعات العملاء
+            $weeklyCustomerRefunds = (float) ProductReturn::query()
+                ->where('return_type', ReturnType::CustomerReturn->value)
+                ->where('status', ReturnStatus::Completed->value)
+                ->where('updated_at', '>=', $weekStart)
+                ->whereIn('resolution', [
+                    ReturnResolution::RefundCash->value,
+                    ReturnResolution::Writeoff->value,
+                    ReturnResolution::CreditNote->value,
+                ])
+                ->sum('total_value');
+
+            $weeklyNetSales = (float) bcsub((string) $weeklyNetSales, (string) $weeklyCustomerRefunds, 2);
+            if (bccomp((string) $weeklyNetSales, '0', 2) < 0) {
+                $weeklyNetSales = 0.0;
+            }
+
+            // Discount and refunds reduce profit, not gross revenue (subtotal)
+            $weeklyProfit = (float) bcsub(
+                bcsub((string) $weeklyGrossProfit, (string) $weeklyDiscount, 2),
+                (string) $weeklyCustomerRefunds,
+                2
+            );
+            if (bccomp((string) $weeklyProfit, '0', 2) < 0) {
+                $weeklyProfit = 0.0;
+            }
 
             return [
                 'total_receivables' => (float) $receivables,
                 'total_supplier_debt' => (float) $supplierDebt,
                 'total_stock_value_cost' => (float) $stockValue,
-                'weekly_revenue' => (float) $weeklyRevenue,
-                'weekly_profit' => (float) $weeklyProfit,
+                'weekly_revenue' => $weeklyRevenue,
+                'weekly_discount' => $weeklyDiscount,
+                'weekly_customer_refunds' => $weeklyCustomerRefunds,
+                'weekly_net_sales' => $weeklyNetSales,
+                'weekly_gross_profit' => $weeklyGrossProfit,
+                'weekly_profit' => $weeklyProfit,
             ];
         });
     }

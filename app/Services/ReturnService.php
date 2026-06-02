@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ReturnItemCondition;
 use App\Enums\ReturnResolution;
 use App\Enums\ReturnStatus;
 use App\Enums\ReturnType;
@@ -65,18 +66,15 @@ class ReturnService
         ReturnItem $item,
         ReturnResolution $res,
     ): void {
-        if (in_array($res, [
-            ReturnResolution::Restock,
-            ReturnResolution::CreditNote,
-            ReturnResolution::RefundCash,
-            ReturnResolution::Replace,
-        ], true)) {
+        if ($this->shouldRestockCustomerItem($item, $res)) {
             $this->addStock(
                 $user,
                 $return,
                 $item,
                 StockMovementType::ReturnIn,
-                'Customer return restock',
+                $item->condition === ReturnItemCondition::Sellable
+                    ? 'Customer return — restock'
+                    : 'Customer return restock',
             );
         }
 
@@ -85,8 +83,23 @@ class ReturnService
             $customer->outstanding_balance = bcsub((string) $customer->outstanding_balance, (string) $item->total, 2);
             $customer->save();
         }
+    }
 
-        // Write-off: defective goods are not added to sellable stock (no movement).
+    /**
+     * Sellable goods go back to inventory. Defective goods do not (scrap), but customer still gets money on refund/writeoff.
+     */
+    private function shouldRestockCustomerItem(ReturnItem $item, ReturnResolution $res): bool
+    {
+        if ($item->condition === ReturnItemCondition::Defective) {
+            return false;
+        }
+
+        return in_array($res, [
+            ReturnResolution::Restock,
+            ReturnResolution::RefundCash,
+            ReturnResolution::CreditNote,
+            ReturnResolution::Replace,
+        ], true);
     }
 
     private function approveSupplierReturnItem(
