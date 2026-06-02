@@ -98,6 +98,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/purchases', [PurchaseController::class, 'store'])->middleware('role:admin,manager');
         Route::get('/purchases/{id}', [PurchaseController::class, 'show']);
         Route::patch('/purchases/{id}/receive', [PurchaseController::class, 'receive'])->middleware('role:admin,manager,warehouse');
+        Route::post('/purchases/{id}/receive', [PurchaseController::class, 'receive'])->middleware('role:admin,manager,warehouse');
         Route::patch('/purchases/{id}/cancel', [PurchaseController::class, 'cancel'])->middleware('role:admin,manager');
 
         Route::get('/installments', [InstallmentController::class, 'index']);

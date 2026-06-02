@@ -11,6 +11,7 @@ Guide for the **Flutter Windows ERP** client: what changed on the API, what to b
 | Part images | [part-image-api.md](./part-image-api.md) |
 | Categories & units API | [part-categories-units-api.md](./part-categories-units-api.md) |
 | Postman | `postman/ERB-Frezzer-API.postman_collection.json` |
+| **Flutter bug fixes (purchases, installments, returns)** | [flutter-app-fixes.md](./flutter-app-fixes.md) |
 
 ---
 
@@ -24,6 +25,15 @@ Guide for the **Flutter Windows ERP** client: what changed on the API, what to b
 | **Catalog fields** | Parts use `category_key`, `unit` enum, `image_url` | Cache `image_url` on catalog sync |
 
 After deploy, run migrations (or `migrate:fresh --seed` on dev). Images need `php artisan storage:link` on the server (Docker entrypoint does this).
+
+### API troubleshooting (purchases, installments, returns)
+
+| Symptom | Where | Fix |
+|---------|--------|-----|
+| `405` on `POST .../purchases/{id}/receive` | Flutter `purchase_repository.dart` | API accepts **PATCH** or **POST** (both supported after deploy). Prefer **PATCH** only to avoid double try. |
+| Receive adds stock twice | Backend (fixed) | Second receive returns **422** `Purchase order already received.` Hide **Receive** when `received_at` is set. |
+| `422 Installment already paid` on second tap | Flutter `installments_screen.dart` | First pay **succeeds**; UI must hide Pay when `is_paid == true` and refresh list after pay. |
+| Returns not affecting stock / totals | Backend (fixed) | Approve with `refund_cash` / `credit_note` restocks; `supplier_credit` deducts stock. Part analysis includes `net_revenue`. |
 
 ---
 

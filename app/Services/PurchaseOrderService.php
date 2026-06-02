@@ -110,6 +110,10 @@ class PurchaseOrderService
 
     public function receive(User $user, PurchaseOrder $po): PurchaseOrder
     {
+        if ($po->received_at !== null) {
+            throw new \InvalidArgumentException('Purchase order already received.');
+        }
+
         DB::transaction(function () use ($user, $po) {
             $po->load('items');
             foreach ($po->items as $item) {

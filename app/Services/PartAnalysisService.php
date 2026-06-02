@@ -43,6 +43,8 @@ class PartAnalysisService
         $valueSell = (float) bcmul($sellPrice, (string) $totalQty, 2);
         $estimatedCogs = (float) bcmul($costPrice, (string) $sales['units_sold'], 2);
         $grossProfit = (float) bcsub((string) $sales['revenue'], (string) $estimatedCogs, 2);
+        $netUnitsSold = max(0, $sales['units_sold'] - $returns['units_returned']);
+        $netRevenue = (float) bcsub((string) $sales['revenue'], (string) $returns['value'], 2);
 
         return [
             'part' => PartTransformer::transform($part),
@@ -66,6 +68,8 @@ class PartAnalysisService
                 'gross_margin_percent' => $sales['revenue'] > 0
                     ? round(($grossProfit / $sales['revenue']) * 100, 2)
                     : 0.0,
+                'net_units_sold' => $netUnitsSold,
+                'net_revenue' => $netRevenue,
             ]),
             'purchases' => $purchases,
             'returns' => $returns,
