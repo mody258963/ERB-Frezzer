@@ -37,22 +37,25 @@ PATCH /api/v1/returns/{id}/approve
 { "resolution": "refund_cash" }
 ```
 
-أو للمعيب مع استرداد المال:
+**مهم:** `reference_id` = **رقم الفاتورة (invoice id)** وليس رقم العميل.
 
-```json
-{ "resolution": "writeoff" }
-```
+### 5. حالة الفاتورة بعد المرتجع
 
-مع بند:
+| `return_status` | المعنى |
+|-----------------|--------|
+| `none` | لا مرتجع |
+| `partial` | جزء من الكميات مُرتجع أو مرتجع معلّق |
+| `returned` | كل البنود مُرتجعة — **لا مرتجع جديد** |
 
-```json
-{ "condition": "defective", "unit_price": 120, "quantity": 1 }
-```
+الـ API يرفض (422) إذا تجاوزت الكمية المباعة أو الفاتورة `returned`.
 
-### 5. تطبيق Flutter
+### 6. تطبيق Flutter
 
 - عند **موافقة** المرتجع: استدعِ الـ API ثم **حدّث المخزون** (`GET /inventory/{branchId}`) و**لوحة التحكم**.
 - اختر `resolution` حسب الحالة: نقدي → `refund_cash`، معيب + فلوس → `writeoff`، آجل → `credit_note`.
 - لا تعتمد على المخزون المحلي فقط بعد المرتجع.
+- أرسل `reference_id` = `invoice.id` من `GET /invoices/{id}`.
+- اخفِ زر «مرتجع» إذا `invoice.return_status == 'returned'`.
+- بعد 422 اعرض `failures[].available` (الكمية المتبقية للإرجاع).
 
 انظر أيضاً: [flutter-app-fixes.md](./flutter-app-fixes.md) §4.

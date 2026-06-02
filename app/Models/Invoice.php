@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InvoicePaymentType;
+use App\Enums\InvoiceReturnStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ class Invoice extends Model
 
     protected $fillable = [
         'invoice_number', 'customer_id', 'branch_id', 'payment_type', 'subtotal', 'discount',
-        'total', 'is_paid', 'paid_at', 'settlement_id', 'created_by',
+        'total', 'is_paid', 'paid_at', 'settlement_id', 'created_by', 'return_status',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class Invoice extends Model
             'total' => 'decimal:2',
             'is_paid' => 'boolean',
             'paid_at' => 'datetime',
+            'return_status' => InvoiceReturnStatus::class,
         ];
     }
 

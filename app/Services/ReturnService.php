@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ReturnItemCondition;
+use App\Enums\ReturnReferenceType;
 use App\Enums\ReturnResolution;
 use App\Enums\ReturnStatus;
 use App\Enums\ReturnType;
@@ -25,6 +26,7 @@ class ReturnService
         private StockMovementRepositoryInterface $movements,
         private AuditLogService $audit,
         private DashboardCacheService $dashboardCache,
+        private ReturnQuantityValidator $returnQuantities,
     ) {}
 
     public function approve(User $user, ProductReturn $return, string $resolution): ProductReturn
@@ -56,6 +58,7 @@ class ReturnService
 
         $this->audit->record($user, 'return.approve', 'return', $return->id, null, $return->fresh()?->toArray());
         $this->dashboardCache->forgetSummary();
+        $this->syncReferenceReturnStatus($return->fresh());
 
         return $return->fresh(['items']);
     }
@@ -190,7 +193,16 @@ class ReturnService
         $return->save();
 
         $this->audit->record($user, 'return.reject', 'return', $return->id, $before, $return->toArray());
+        $this->syncReferenceReturnStatus($return->fresh());
 
         return $return;
+    }
+
+    private function syncReferenceReturnStatus(ProductReturn $return): void
+    {
+        if ($return->return_type === ReturnType::CustomerReturn
+            && $return->reference_type === ReturnReferenceType::Invoice) {
+            $this->returnQuantities->syncInvoiceReturnStatus($return->reference_id);
+        }
     }
 }

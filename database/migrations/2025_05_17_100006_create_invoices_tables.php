@@ -21,6 +21,7 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
             $table->foreignUuid('settlement_id')->nullable()->constrained('saturday_settlements')->nullOnDelete();
             $table->foreignUuid('created_by')->constrained('users');
+            $table->string('return_status', 16)->default('none');
             $table->timestamps();
 
             $table->index(['customer_id', 'is_paid']);

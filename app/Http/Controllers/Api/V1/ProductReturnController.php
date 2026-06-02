@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ReturnReferenceType;
+use App\Enums\ReturnType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductReturnResource;
 use App\Models\ProductReturn;
 use App\Repositories\Contracts\ProductReturnRepositoryInterface;
+use App\Services\ReturnQuantityValidator;
 use App\Services\ReturnService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,7 +18,8 @@ class ProductReturnController extends Controller
 {
     public function __construct(
         private ProductReturnRepositoryInterface $returns,
-        private ReturnService $returnService
+        private ReturnService $returnService,
+        private ReturnQuantityValidator $returnQuantities,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -64,6 +68,16 @@ class ProductReturnController extends Controller
             ];
         }
 
+        if ($data['return_type'] === ReturnType::CustomerReturn->value
+            && $data['reference_type'] === ReturnReferenceType::Invoice->value) {
+            $this->returnQuantities->assertCustomerInvoiceReturn($data['reference_id'], $items);
+        }
+
+        if ($data['return_type'] === ReturnType::SupplierReturn->value
+            && $data['reference_type'] === ReturnReferenceType::PurchaseOrder->value) {
+            $this->returnQuantities->assertSupplierPurchaseReturn($data['reference_id'], $items);
+        }
+
         $ret = $this->returns->create(
             [
                 'return_number' => $this->returns->nextReturnNumber(),
@@ -84,6 +98,10 @@ class ProductReturnController extends Controller
             ],
             $items
         );
+
+        if ($data['reference_type'] === ReturnReferenceType::Invoice->value) {
+            $this->returnQuantities->syncInvoiceReturnStatus($data['reference_id']);
+        }
 
         return (new ProductReturnResource($ret->load(['items.part', 'customer', 'supplier', 'branch', 'creator'])))
             ->response()

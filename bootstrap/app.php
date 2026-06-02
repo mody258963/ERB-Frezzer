@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\ReturnQuantityExceededException;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->renderable(function (InsufficientStockException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'failures' => $e->failures,
+            ], 422);
+        });
+
+        $exceptions->renderable(function (ReturnQuantityExceededException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'failures' => $e->failures,

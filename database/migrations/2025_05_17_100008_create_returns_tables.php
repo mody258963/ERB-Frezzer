@@ -28,6 +28,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['return_type', 'status']);
+            $table->index(['reference_type', 'reference_id']);
         });
 
         Schema::create('return_items', function (Blueprint $table) {

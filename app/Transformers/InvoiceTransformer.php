@@ -25,6 +25,7 @@ final class InvoiceTransformer
             'total' => (float) $invoice->total,
             'is_paid' => $invoice->is_paid,
             'paid_at' => $invoice->paid_at?->toISOString(),
+            'return_status' => self::enumValue($invoice->return_status) ?? 'none',
             'settlement_id' => $invoice->settlement_id,
             'created_by' => $invoice->created_by,
             'created_at' => $invoice->created_at?->toISOString(),

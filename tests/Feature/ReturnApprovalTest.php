@@ -35,66 +35,58 @@ class ReturnApprovalTest extends TestCase
     {
         $branch = Branch::query()->firstOrFail();
         $part = $this->makePart('RET-CASH');
-        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branch->id, 'quantity' => 5]);
-        $customer = Customer::query()->create([
-            'name' => 'Return Customer',
-            'type' => 'cash',
-            'phone' => null,
-            'address' => null,
-            'credit_limit' => 0,
-            'outstanding_balance' => 0,
-            'last_settled_at' => null,
-            'is_active' => true,
-        ]);
+        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branch->id, 'quantity' => 10]);
+        $customer = $this->makeCustomer('Return Customer');
 
-        $create = $this->withToken($this->token)->postJson('/api/v1/returns', [
+        $invoiceId = (string) $this->withToken($this->token)->postJson('/api/v1/invoices', [
+            'customer_id' => $customer->id,
+            'branch_id' => $branch->id,
+            'payment_type' => 'cash',
+            'items' => [['part_id' => $part->id, 'quantity' => 2]],
+        ])->json('id');
+
+        $returnId = (string) $this->withToken($this->token)->postJson('/api/v1/returns', [
             'return_type' => 'customer_return',
-            'reference_id' => $customer->id,
+            'reference_id' => $invoiceId,
             'reference_type' => 'invoice',
             'customer_id' => $customer->id,
             'branch_id' => $branch->id,
             'items' => [
                 ['part_id' => $part->id, 'quantity' => 2, 'unit_price' => 50, 'condition' => 'sellable'],
             ],
-        ]);
-        $create->assertCreated();
-        $returnId = (string) $create->json('id');
+        ])->json('id');
 
         $this->withToken($this->token)->patchJson("/api/v1/returns/{$returnId}/approve", [
             'resolution' => 'refund_cash',
         ])->assertOk();
 
-        $this->assertSame(7, (int) Stock::query()->where('part_id', $part->id)->where('branch_id', $branch->id)->value('quantity'));
+        $this->assertSame(10, (int) Stock::query()->where('part_id', $part->id)->where('branch_id', $branch->id)->value('quantity'));
     }
 
     public function test_defective_writeoff_refunds_money_without_restock(): void
     {
         $branch = Branch::query()->firstOrFail();
         $part = $this->makePart('RET-DEF');
-        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branch->id, 'quantity' => 5]);
-        $customer = Customer::query()->create([
-            'name' => 'Defect Customer',
-            'type' => 'cash',
-            'phone' => null,
-            'address' => null,
-            'credit_limit' => 0,
-            'outstanding_balance' => 0,
-            'last_settled_at' => null,
-            'is_active' => true,
-        ]);
+        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branch->id, 'quantity' => 6]);
+        $customer = $this->makeCustomer('Defect Customer');
 
-        $create = $this->withToken($this->token)->postJson('/api/v1/returns', [
+        $invoiceId = (string) $this->withToken($this->token)->postJson('/api/v1/invoices', [
+            'customer_id' => $customer->id,
+            'branch_id' => $branch->id,
+            'payment_type' => 'cash',
+            'items' => [['part_id' => $part->id, 'quantity' => 1]],
+        ])->json('id');
+
+        $returnId = (string) $this->withToken($this->token)->postJson('/api/v1/returns', [
             'return_type' => 'customer_return',
-            'reference_id' => $customer->id,
+            'reference_id' => $invoiceId,
             'reference_type' => 'invoice',
             'customer_id' => $customer->id,
             'branch_id' => $branch->id,
             'items' => [
                 ['part_id' => $part->id, 'quantity' => 1, 'unit_price' => 120, 'condition' => 'defective'],
             ],
-        ]);
-        $create->assertCreated();
-        $returnId = (string) $create->json('id');
+        ])->json('id');
 
         $this->withToken($this->token)->patchJson("/api/v1/returns/{$returnId}/approve", [
             'resolution' => 'writeoff',
@@ -109,35 +101,26 @@ class ReturnApprovalTest extends TestCase
         $branch = Branch::query()->firstOrFail();
         $part = $this->makePart('RET-DASH');
         Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branch->id, 'quantity' => 50]);
-        $customer = Customer::query()->create([
-            'name' => 'Dash Customer',
-            'type' => 'cash',
-            'phone' => null,
-            'address' => null,
-            'credit_limit' => 0,
-            'outstanding_balance' => 0,
-            'last_settled_at' => null,
-            'is_active' => true,
-        ]);
+        $customer = $this->makeCustomer('Dash Customer');
 
-        $this->withToken($this->token)->postJson('/api/v1/invoices', [
+        $invoiceId = (string) $this->withToken($this->token)->postJson('/api/v1/invoices', [
             'customer_id' => $customer->id,
             'branch_id' => $branch->id,
             'payment_type' => 'cash',
             'items' => [['part_id' => $part->id, 'quantity' => 1, 'unit_price' => 200]],
-        ])->assertCreated();
+        ])->json('id');
 
-        $create = $this->withToken($this->token)->postJson('/api/v1/returns', [
+        $returnId = (string) $this->withToken($this->token)->postJson('/api/v1/returns', [
             'return_type' => 'customer_return',
-            'reference_id' => $customer->id,
+            'reference_id' => $invoiceId,
             'reference_type' => 'invoice',
             'customer_id' => $customer->id,
             'branch_id' => $branch->id,
             'items' => [
                 ['part_id' => $part->id, 'quantity' => 1, 'unit_price' => 200, 'condition' => 'sellable'],
             ],
-        ]);
-        $returnId = (string) $create->json('id');
+        ])->json('id');
+
         $this->withToken($this->token)->patchJson("/api/v1/returns/{$returnId}/approve", [
             'resolution' => 'refund_cash',
         ])->assertOk();
@@ -157,29 +140,50 @@ class ReturnApprovalTest extends TestCase
             'contact_person' => null,
             'phone' => null,
             'address' => null,
-            'total_debt' => 500,
+            'total_debt' => 0,
             'is_active' => true,
         ]);
 
-        $create = $this->withToken($this->token)->postJson('/api/v1/returns', [
+        $poId = (string) $this->withToken($this->token)->postJson('/api/v1/purchases', [
+            'supplier_id' => $supplier->id,
+            'branch_id' => $branch->id,
+            'payment_type' => 'immediate',
+            'items' => [['part_id' => $part->id, 'quantity' => 5, 'unit_cost' => 100]],
+        ])->json('id');
+
+        $this->withToken($this->token)->patchJson("/api/v1/purchases/{$poId}/receive")->assertOk();
+
+        $returnId = (string) $this->withToken($this->token)->postJson('/api/v1/returns', [
             'return_type' => 'supplier_return',
-            'reference_id' => $supplier->id,
+            'reference_id' => $poId,
             'reference_type' => 'purchase_order',
             'supplier_id' => $supplier->id,
             'branch_id' => $branch->id,
             'items' => [
                 ['part_id' => $part->id, 'quantity' => 3, 'unit_price' => 100, 'condition' => 'defective'],
             ],
-        ]);
-        $create->assertCreated();
-        $returnId = (string) $create->json('id');
+        ])->json('id');
 
         $this->withToken($this->token)->patchJson("/api/v1/returns/{$returnId}/approve", [
             'resolution' => 'supplier_credit',
         ])->assertOk();
 
-        $this->assertSame(7, (int) Stock::query()->where('part_id', $part->id)->where('branch_id', $branch->id)->value('quantity'));
+        $this->assertSame(12, (int) Stock::query()->where('part_id', $part->id)->where('branch_id', $branch->id)->value('quantity'));
         $this->assertEquals(200.0, (float) $supplier->fresh()->total_debt);
+    }
+
+    private function makeCustomer(string $name): Customer
+    {
+        return Customer::query()->create([
+            'name' => $name,
+            'type' => 'cash',
+            'phone' => null,
+            'address' => null,
+            'credit_limit' => 0,
+            'outstanding_balance' => 0,
+            'last_settled_at' => null,
+            'is_active' => true,
+        ]);
     }
 
     private function makePart(string $code): Part

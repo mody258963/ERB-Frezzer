@@ -216,6 +216,22 @@ Body: `{ "payment_method": "cash" }` (or `bank_transfer`, `check`)
 
 **Approve:** `PATCH /api/v1/returns/{id}/approve`
 
+**Important:** `reference_id` must be the **invoice UUID**, not the customer id.
+
+```json
+{
+  "return_type": "customer_return",
+  "reference_id": "<invoice-uuid>",
+  "reference_type": "invoice",
+  "customer_id": "<customer-uuid>",
+  "branch_id": "<branch-uuid>",
+  "items": [{ "part_id": "...", "quantity": 1, "unit_price": 120, "condition": "sellable" }]
+}
+```
+
+After create/approve, invoice has `return_status`: `none` | `partial` | `returned`.  
+You **cannot** return more quantity than sold, or return again when status is `returned` (422 + `failures`).
+
 | Customer item `condition` | Resolution | Stock | Money off dashboard |
 |---------------------------|------------|-------|---------------------|
 | `sellable` | `refund_cash` | ✅ +qty | ✅ `weekly_customer_refunds` |
