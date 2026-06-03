@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\CapitalSettingsController;
 use App\Http\Controllers\Api\V1\BranchFinanceController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -47,6 +48,11 @@ Route::prefix('v1')->group(function () {
         Route::post('/part-categories', [PartCategoryController::class, 'store'])->middleware('role:admin,manager');
         Route::put('/part-categories/{id}', [PartCategoryController::class, 'update'])->middleware('role:admin,manager');
         Route::delete('/part-categories/{id}', [PartCategoryController::class, 'destroy'])->middleware('role:admin');
+
+        Route::get('/settings/capital', [CapitalSettingsController::class, 'show']);
+        Route::put('/settings/capital', [CapitalSettingsController::class, 'update'])->middleware('role:admin');
+        Route::patch('/settings/capital', [CapitalSettingsController::class, 'update'])->middleware('role:admin');
+        Route::get('/settings/capital/adjustments', [CapitalSettingsController::class, 'adjustments'])->middleware('role:admin');
 
         Route::get('/part-units', [PartUnitController::class, 'index']);
 

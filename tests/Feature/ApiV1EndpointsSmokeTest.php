@@ -92,6 +92,13 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $discardPartId = (string) $discardPart->json('id');
 
         $auth()->getJson('/api/v1/part-categories')->assertOk();
+        $auth()->getJson('/api/v1/settings/capital')->assertOk();
+        $auth()->putJson('/api/v1/settings/capital', [
+            'capital_amount' => 100000,
+            'reason' => 'Smoke test seed capital',
+        ])->assertOk();
+        $auth()->getJson('/api/v1/settings/capital/adjustments')->assertOk();
+
         $auth()->getJson('/api/v1/part-units')->assertOk();
         $auth()->getJson('/api/v1/parts')->assertOk();
         $auth()->getJson("/api/v1/parts/{$partId}")->assertOk();

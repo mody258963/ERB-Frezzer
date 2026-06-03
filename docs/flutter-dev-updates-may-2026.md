@@ -185,10 +185,53 @@ If you use `migrate:fresh` in dev only, returns table includes `completed_at`.
 
 ---
 
-## 6. Quick Dart checklist
+## 6. Business capital (Settings)
+
+Admin sets **owner / business capital** (e.g. 100,000 EGP) before or during operations. Used for financing overview (stock + receivables vs capital).
+
+| Method | Path | Who |
+|--------|------|-----|
+| GET | `/settings/capital` | Any authenticated user (read) |
+| PUT/PATCH | `/settings/capital` | **Admin only** |
+| GET | `/settings/capital/adjustments` | **Admin only** (history) |
+
+**Update body:**
+
+```json
+{
+  "capital_amount": 100000,
+  "reason": "Initial capital",
+  "notes": "Owner funding EGP"
+}
+```
+
+**Response** includes `financing_snapshot`:
+
+| Field | Meaning |
+|-------|---------|
+| `inventory_at_cost` | Stock value at cost |
+| `customer_receivables` | Outstanding customer balances |
+| `supplier_debt` | Unpaid supplier debt |
+| `deployed_capital` | Inventory + receivables |
+| `estimated_available` | Rough cash left ≈ capital − deployed − supplier_debt |
+
+**Dashboard** `GET /dashboard/summary` also returns:
+
+- `business_capital`
+- `capital_currency` (default `EGP`)
+- `capital_estimated_available`
+
+**Reports** `GET /reports/financial` includes a `capital` block with the same snapshot.
+
+**Flutter Settings screen:** add “Business capital” form (admin only to save); managers can view.
+
+---
+
+## 7. Quick Dart checklist
 
 - [ ] Dashboard cards: `weekly_profit`, `weekly_customer_refunds`, `weekly_net_sales`
 - [ ] Reports screen: call `/reports/financial` with date range (+ branch filter for admin)
 - [ ] Returns: invoice id as `reference_id`; respect `return_status`
 - [ ] Settings (admin): user list + create via `/users`
+- [ ] Settings (admin): business capital via `/settings/capital`
 - [ ] POS: branch selector when `can_select_branch == true`

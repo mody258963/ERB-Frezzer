@@ -13,6 +13,8 @@ final class FinancialReportTransformer
         $period = $payload['period'] ?? [];
         $totals = $payload['totals'] ?? [];
         $returns = $payload['returns'] ?? [];
+        $capital = $payload['capital'] ?? [];
+        $capitalSnapshot = $capital['financing_snapshot'] ?? [];
 
         return [
             'period' => [
@@ -33,6 +35,17 @@ final class FinancialReportTransformer
                 'customer_value' => (float) ($returns['customer_value'] ?? 0),
                 'supplier_count' => (int) ($returns['supplier_count'] ?? 0),
                 'supplier_value' => (float) ($returns['supplier_value'] ?? 0),
+            ],
+            'capital' => [
+                'capital_amount' => (float) ($capital['capital_amount'] ?? 0),
+                'currency' => $capital['currency'] ?? 'EGP',
+                'financing_snapshot' => [
+                    'inventory_at_cost' => (float) ($capitalSnapshot['inventory_at_cost'] ?? 0),
+                    'customer_receivables' => (float) ($capitalSnapshot['customer_receivables'] ?? 0),
+                    'supplier_debt' => (float) ($capitalSnapshot['supplier_debt'] ?? 0),
+                    'deployed_capital' => (float) ($capitalSnapshot['deployed_capital'] ?? 0),
+                    'estimated_available' => (float) ($capitalSnapshot['estimated_available'] ?? 0),
+                ],
             ],
             'by_branch' => collect($payload['by_branch'] ?? [])->map(fn ($row) => [
                 'branch_id' => $row['branch_id'] ?? null,

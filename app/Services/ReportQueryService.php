@@ -14,6 +14,7 @@ class ReportQueryService
 {
     public function __construct(
         private FinancialMetricsService $financialMetrics,
+        private CapitalService $capital,
     ) {}
 
     public function sales(
@@ -69,6 +70,8 @@ class ReportQueryService
             $byBranch = [];
         }
 
+        $capitalRow = $this->capital->showWithSnapshot();
+
         return [
             'period' => [
                 'from' => $fromDate->toDateString(),
@@ -78,6 +81,11 @@ class ReportQueryService
             'totals' => $totals,
             'returns' => $returns,
             'by_branch' => $byBranch,
+            'capital' => [
+                'capital_amount' => $capitalRow['capital_amount'],
+                'currency' => $capitalRow['currency'],
+                'financing_snapshot' => $capitalRow['financing_snapshot'],
+            ],
         ];
     }
 

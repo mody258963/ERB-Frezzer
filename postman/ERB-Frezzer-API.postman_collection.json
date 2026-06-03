@@ -423,6 +423,42 @@
 			]
 		},
 		{
+			"name": "Settings",
+			"item": [
+				{
+					"name": "Get business capital",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{baseUrl}}/settings/capital"
+					}
+				},
+				{
+					"name": "Set business capital",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"capital_amount\": 100000,\n  \"reason\": \"Initial owner capital\",\n  \"notes\": \"EGP\"\n}"
+						},
+						"url": "{{baseUrl}}/settings/capital"
+					}
+				},
+				{
+					"name": "Capital adjustment history",
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{baseUrl}}/settings/capital/adjustments?per_page=25"
+					}
+				}
+			]
+		},
+		{
 			"name": "Parts",
 			"item": [
 				{

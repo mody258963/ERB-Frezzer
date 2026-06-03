@@ -17,6 +17,7 @@ class DashboardQueryService
     public function __construct(
         private DashboardCacheService $dashboardCache,
         private FinancialMetricsService $financialMetrics,
+        private CapitalService $capital,
     ) {}
 
     public function summary(?string $branchId = null): array
@@ -38,11 +39,17 @@ class DashboardQueryService
                 ->value('v') ?? 0;
 
             $metrics = $this->financialMetrics->totals($from, $to, $branchId);
+            $capitalSetting = $this->capital->settings();
+            $capitalAmount = (float) $capitalSetting->capital_amount;
+            $capitalSnapshot = $this->capital->financingSnapshot($capitalAmount);
 
             return [
                 'total_receivables' => (float) $receivables,
                 'total_supplier_debt' => (float) $supplierDebt,
                 'total_stock_value_cost' => (float) $stockValue,
+                'business_capital' => $capitalAmount,
+                'capital_currency' => $capitalSetting->currency,
+                'capital_estimated_available' => $capitalSnapshot['estimated_available'],
                 'weekly_revenue' => $metrics['revenue'],
                 'weekly_discount' => $metrics['discount'],
                 'weekly_customer_refunds' => $metrics['customer_refunds'],
