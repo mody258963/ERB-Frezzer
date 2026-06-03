@@ -8,7 +8,9 @@ use App\Http\Resources\InventoryValuationRowResource;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\ReturnsSummaryResource;
 use App\Http\Resources\SupplierDebtAgingRowResource;
+use App\Http\Resources\FinancialReportResource;
 use App\Http\Resources\PartSalesChartResource;
+use App\Support\BranchVisibility;
 use App\Services\PartSalesChartService;
 use App\Services\ReportQueryService;
 use Illuminate\Http\Request;
@@ -24,6 +26,7 @@ class ReportController extends Controller
     public function sales(Request $request): AnonymousResourceCollection
     {
         $rows = $this->reports->sales(
+            $request->user(),
             $request->query('from'),
             $request->query('to'),
             $request->query('branch_id'),
@@ -31,6 +34,24 @@ class ReportController extends Controller
         );
 
         return InvoiceResource::collection(collect($rows));
+    }
+
+    public function financial(Request $request): FinancialReportResource
+    {
+        $data = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'branch_id' => ['nullable', 'uuid'],
+        ]);
+
+        return new FinancialReportResource(
+            $this->reports->financial(
+                $request->user(),
+                $data['from'] ?? null,
+                $data['to'] ?? null,
+                $data['branch_id'] ?? null,
+            )
+        );
     }
 
     public function inventory(Request $request): AnonymousResourceCollection
@@ -64,11 +85,16 @@ class ReportController extends Controller
             'rank_by' => ['nullable', 'in:units,revenue'],
         ]);
 
+        $branchId = BranchVisibility::resolveBranchId(
+            $request->user(),
+            $filters['branch_id'] ?? null,
+        );
+
         return new PartSalesChartResource(
             $this->partSalesChart->chart(
                 $request->user(),
                 (int) ($filters['year'] ?? now()->year),
-                $filters['branch_id'] ?? null,
+                $branchId,
                 (int) ($filters['limit'] ?? 10),
                 $filters['rank_by'] ?? 'units',
             )

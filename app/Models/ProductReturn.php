@@ -23,7 +23,7 @@ class ProductReturn extends Model
     protected $fillable = [
         'return_number', 'return_type', 'reference_id', 'reference_type', 'customer_id', 'supplier_id',
         'branch_id', 'reason', 'status', 'resolution', 'total_value', 'notes', 'attachment_url',
-        'approved_by', 'created_by',
+        'approved_by', 'created_by', 'completed_at',
     ];
 
     protected function casts(): array
@@ -34,6 +34,7 @@ class ProductReturn extends Model
             'status' => ReturnStatus::class,
             'resolution' => ReturnResolution::class,
             'total_value' => 'decimal:2',
+            'completed_at' => 'datetime',
         ];
     }
 

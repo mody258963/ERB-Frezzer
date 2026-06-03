@@ -19,7 +19,9 @@ class PartSalesChartService
         int $limit = 10,
         string $rankBy = 'units',
     ): array {
-        $branchId = $user?->branch_id ?? $branchId;
+        if ($user?->branch_id && $user->role !== \App\Enums\UserRole::Admin) {
+            $branchId = $user->branch_id;
+        }
         $from = sprintf('%04d-01-01', $year);
         $to = sprintf('%04d-12-31', $year);
 

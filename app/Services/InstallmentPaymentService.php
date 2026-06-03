@@ -60,7 +60,7 @@ class InstallmentPaymentService
             $this->audit->record($user, 'installment.pay', 'supplier_installment', $inst->id, $beforeSnap, $inst->fresh()->toArray());
         });
 
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
 
         return SupplierInstallment::query()
             ->with(['supplier', 'purchaseOrder'])

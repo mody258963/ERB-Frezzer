@@ -16,6 +16,7 @@ use App\Repositories\Contracts\StockRepositoryInterface;
 use App\Repositories\Contracts\StockTransferRepositoryInterface;
 use App\Repositories\Contracts\SupplierInstallmentRepositoryInterface;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\AuditLogRepository;
 use App\Repositories\Eloquent\BranchFinancialEntryRepository;
 use App\Repositories\Eloquent\BranchRepository;
@@ -30,6 +31,7 @@ use App\Repositories\Eloquent\StockRepository;
 use App\Repositories\Eloquent\StockTransferRepository;
 use App\Repositories\Eloquent\SupplierInstallmentRepository;
 use App\Repositories\Eloquent\SupplierRepository;
+use App\Repositories\Eloquent\UserRepository;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
@@ -52,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(StockTransferRepositoryInterface::class, StockTransferRepository::class);
         $this->app->singleton(SupplierInstallmentRepositoryInterface::class, SupplierInstallmentRepository::class);
         $this->app->singleton(SupplierRepositoryInterface::class, SupplierRepository::class);
+        $this->app->singleton(UserRepositoryInterface::class, UserRepository::class);
     }
 
     public function boot(): void

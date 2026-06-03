@@ -5,12 +5,26 @@ namespace App\Services;
 use App\Models\Invoice;
 use App\Models\ProductReturn;
 use App\Models\Stock;
+use App\Models\User;
+use App\Support\BranchVisibility;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ReportQueryService
 {
-    public function sales(?string $from, ?string $to, ?string $branchId, ?string $category): array
-    {
+    public function __construct(
+        private FinancialMetricsService $financialMetrics,
+    ) {}
+
+    public function sales(
+        ?User $user,
+        ?string $from,
+        ?string $to,
+        ?string $branchId,
+        ?string $category,
+    ): array {
+        $branchId = BranchVisibility::resolveBranchId($user, $branchId);
+
         $q = Invoice::query()
             ->with(['branch', 'customer'])
             ->when($from, fn ($q) => $q->whereDate('created_at', '>=', $from))
@@ -21,7 +35,50 @@ class ReportQueryService
                 fn ($c) => $c->where('key', $category)->orWhere('name', $category)
             ));
 
+        BranchVisibility::scope($user, $q, 'branch_id');
+
         return $q->latest()->limit(5000)->get()->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function financial(
+        ?User $user,
+        ?string $from,
+        ?string $to,
+        ?string $branchId,
+    ): array {
+        $branchId = BranchVisibility::resolveBranchId($user, $branchId);
+
+        $fromDate = $from
+            ? Carbon::parse($from)->startOfDay()
+            : now()->startOfMonth();
+        $toDate = $to
+            ? Carbon::parse($to)->endOfDay()
+            : now()->endOfDay();
+
+        $totals = $this->financialMetrics->totals($fromDate, $toDate, $branchId);
+        $returns = $this->financialMetrics->returnsBreakdown($fromDate, $toDate, $branchId);
+
+        $byBranch = $branchId === null
+            ? $this->financialMetrics->byBranch($fromDate, $toDate)
+            : [];
+
+        if ($branchId !== null) {
+            $byBranch = [];
+        }
+
+        return [
+            'period' => [
+                'from' => $fromDate->toDateString(),
+                'to' => $toDate->toDateString(),
+                'branch_id' => $branchId,
+            ],
+            'totals' => $totals,
+            'returns' => $returns,
+            'by_branch' => $byBranch,
+        ];
     }
 
     public function inventoryValuation(): array

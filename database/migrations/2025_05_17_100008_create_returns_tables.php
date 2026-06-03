@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('attachment_url')->nullable();
             $table->foreignUuid('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignUuid('created_by')->constrained('users');
+            $table->timestamp('completed_at')->nullable();
             $table->timestamps();
 
             $table->index(['return_type', 'status']);

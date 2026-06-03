@@ -21,7 +21,15 @@
 
 **مهم:** للمنتج المعيب استخدم `writeoff` أو `refund_cash` — العميل يسترد المبلغ (`unit_price × quantity` على البند).
 
-### 3. لوحة التحكم `GET /api/v1/dashboard/summary`
+### 3. لوحة التحكم والتقارير
+
+- `GET /api/v1/dashboard/summary` — `weekly_profit`, `weekly_customer_refunds`
+- `GET /api/v1/dashboard/sales` — حقل `totals` جديد
+- `GET /api/v1/reports/financial` — تقرير مالي (مبيعات + مرتجعات + ربح)
+
+تفاصيل Flutter: [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md)
+
+#### `GET /api/v1/dashboard/summary`
 
 | الحقل | المعنى |
 |--------|--------|

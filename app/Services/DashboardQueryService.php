@@ -2,12 +2,8 @@
 
 namespace App\Services;
 
-use App\Enums\ReturnResolution;
-use App\Enums\ReturnStatus;
-use App\Enums\ReturnType;
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\ProductReturn;
 use App\Models\Stock;
 use App\Models\Supplier;
 use App\Models\SupplierInstallment;
@@ -20,11 +16,20 @@ class DashboardQueryService
 
     public function __construct(
         private DashboardCacheService $dashboardCache,
+        private FinancialMetricsService $financialMetrics,
     ) {}
 
-    public function summary(): array
+    public function summary(?string $branchId = null): array
     {
-        return Cache::remember($this->dashboardCache->keySummary(), self::TTL, function () {
+        $from = now()->startOfWeek();
+        $to = now()->endOfWeek();
+        $cacheKey = $this->dashboardCache->keySummary($branchId);
+
+        if ($branchId !== null) {
+            $this->dashboardCache->rememberBranchKey($branchId);
+        }
+
+        return Cache::remember($cacheKey, self::TTL, function () use ($from, $to, $branchId) {
             $receivables = Customer::query()->sum('outstanding_balance');
             $supplierDebt = Supplier::query()->sum('total_debt');
             $stockValue = Stock::query()
@@ -32,59 +37,18 @@ class DashboardQueryService
                 ->selectRaw('SUM(stock.quantity * parts.cost_price) as v')
                 ->value('v') ?? 0;
 
-            $weekStart = now()->startOfWeek();
-            $weekInvoices = Invoice::query()->where('created_at', '>=', $weekStart);
-
-            // Gross sales (before invoice discount) — إيرادات المحل قبل الخصم
-            $weeklyRevenue = (float) ((clone $weekInvoices)->sum('subtotal'));
-            $weeklyDiscount = (float) ((clone $weekInvoices)->sum('discount'));
-            // Net collected from customers — ما يدفعه العميل
-            $weeklyNetSales = (float) ((clone $weekInvoices)->sum('total'));
-
-            $weeklyGrossProfit = (float) (Invoice::query()
-                ->join('invoice_items', 'invoice_items.invoice_id', '=', 'invoices.id')
-                ->join('parts', 'parts.id', '=', 'invoice_items.part_id')
-                ->where('invoices.created_at', '>=', $weekStart)
-                ->selectRaw('SUM((invoice_items.unit_price - parts.cost_price) * invoice_items.quantity) as p')
-                ->value('p') ?? 0);
-
-            // Customer refunds (cash / defective refund / credit note) — مرتجعات العملاء
-            $weeklyCustomerRefunds = (float) ProductReturn::query()
-                ->where('return_type', ReturnType::CustomerReturn->value)
-                ->where('status', ReturnStatus::Completed->value)
-                ->where('updated_at', '>=', $weekStart)
-                ->whereIn('resolution', [
-                    ReturnResolution::RefundCash->value,
-                    ReturnResolution::Writeoff->value,
-                    ReturnResolution::CreditNote->value,
-                ])
-                ->sum('total_value');
-
-            $weeklyNetSales = (float) bcsub((string) $weeklyNetSales, (string) $weeklyCustomerRefunds, 2);
-            if (bccomp((string) $weeklyNetSales, '0', 2) < 0) {
-                $weeklyNetSales = 0.0;
-            }
-
-            // Discount and refunds reduce profit, not gross revenue (subtotal)
-            $weeklyProfit = (float) bcsub(
-                bcsub((string) $weeklyGrossProfit, (string) $weeklyDiscount, 2),
-                (string) $weeklyCustomerRefunds,
-                2
-            );
-            if (bccomp((string) $weeklyProfit, '0', 2) < 0) {
-                $weeklyProfit = 0.0;
-            }
+            $metrics = $this->financialMetrics->totals($from, $to, $branchId);
 
             return [
                 'total_receivables' => (float) $receivables,
                 'total_supplier_debt' => (float) $supplierDebt,
                 'total_stock_value_cost' => (float) $stockValue,
-                'weekly_revenue' => $weeklyRevenue,
-                'weekly_discount' => $weeklyDiscount,
-                'weekly_customer_refunds' => $weeklyCustomerRefunds,
-                'weekly_net_sales' => $weeklyNetSales,
-                'weekly_gross_profit' => $weeklyGrossProfit,
-                'weekly_profit' => $weeklyProfit,
+                'weekly_revenue' => $metrics['revenue'],
+                'weekly_discount' => $metrics['discount'],
+                'weekly_customer_refunds' => $metrics['customer_refunds'],
+                'weekly_net_sales' => $metrics['net_sales'],
+                'weekly_gross_profit' => $metrics['gross_profit'],
+                'weekly_profit' => $metrics['profit'],
             ];
         });
     }
@@ -148,28 +112,75 @@ class DashboardQueryService
         ];
     }
 
-    public function sales(): array
+    public function sales(?string $branchId = null): array
     {
-        $byCategory = Invoice::query()
+        $from = now()->startOfWeek();
+        $to = now()->endOfWeek();
+
+        $categoryQuery = Invoice::query()
             ->join('invoice_items', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->join('parts', 'parts.id', '=', 'invoice_items.part_id')
             ->join('part_categories', 'part_categories.id', '=', 'parts.category_id')
+            ->where('invoices.created_at', '>=', $from)
+            ->where('invoices.created_at', '<=', $to);
+
+        if ($branchId !== null) {
+            $categoryQuery->where('invoices.branch_id', $branchId);
+        }
+
+        $byCategory = $categoryQuery
             ->selectRaw('part_categories.key as category_key, part_categories.name as category, SUM(invoice_items.total) as total')
             ->groupBy('part_categories.id', 'part_categories.key', 'part_categories.name')
             ->get();
 
-        $byBranch = Invoice::query()
+        $branchQuery = Invoice::query()
             ->join('branches', 'branches.id', '=', 'invoices.branch_id')
-            ->selectRaw('branches.name, SUM(invoices.total) as total')
+            ->where('invoices.created_at', '>=', $from)
+            ->where('invoices.created_at', '<=', $to);
+
+        if ($branchId !== null) {
+            $branchQuery->where('invoices.branch_id', $branchId);
+        }
+
+        $byBranchRaw = $branchQuery
+            ->selectRaw('branches.id as branch_id, branches.name, SUM(invoices.subtotal) as revenue, SUM(invoices.discount) as discount, SUM(invoices.total) as total')
             ->groupBy('branches.id', 'branches.name')
             ->get();
 
-        $creditVsCash = Invoice::query()
+        $refundsByBranch = $this->financialMetrics->customerRefundsByBranchId($from, $to);
+
+        $byBranch = $byBranchRaw->map(function ($row) use ($from, $to) {
+            $refunds = (float) ($refundsByBranch[$row->branch_id] ?? 0);
+            $branchMetrics = $this->financialMetrics->totals($from, $to, $row->branch_id);
+
+            return (object) [
+                'branch_id' => $row->branch_id,
+                'name' => $row->name,
+                'total' => (float) $row->total,
+                'revenue' => (float) $row->revenue,
+                'discount' => (float) $row->discount,
+                'customer_refunds' => $refunds,
+                'profit' => $branchMetrics['profit'],
+            ];
+        });
+
+        $creditQuery = Invoice::query()
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to);
+
+        if ($branchId !== null) {
+            $creditQuery->where('branch_id', $branchId);
+        }
+
+        $creditVsCash = $creditQuery
             ->selectRaw('payment_type, SUM(total) as total')
             ->groupBy('payment_type')
             ->get();
 
+        $totals = $this->financialMetrics->totals($from, $to, $branchId);
+
         return [
+            'totals' => $totals,
             'by_category' => $byCategory,
             'by_branch' => $byBranch,
             'credit_vs_cash' => $creditVsCash,

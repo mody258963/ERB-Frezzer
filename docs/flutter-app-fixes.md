@@ -2,7 +2,7 @@
 
 Guide for the **erd_rezzer** / FrostParts Windows client. The API is **ERB-Frezzer** (`https://api.tppower.shop/api/v1` or your server).
 
-Related: [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [flutter-windows-pos-offline-guide.md](./flutter-windows-pos-offline-guide.md).
+Related: [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md) (dashboard profit, financial reports, admin users/branches), [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [flutter-windows-pos-offline-guide.md](./flutter-windows-pos-offline-guide.md).
 
 ---
 

@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SettlementController;
 use App\Http\Controllers\Api\V1\StockTransferController;
 use App\Http\Controllers\Api\V1\SupplierController;
+use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -28,7 +29,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
 
+        Route::get('/users', [UserController::class, 'index'])->middleware('role:admin');
+        Route::post('/users', [UserController::class, 'store'])->middleware('role:admin');
+        Route::get('/users/{id}', [UserController::class, 'show'])->middleware('role:admin');
+        Route::put('/users/{id}', [UserController::class, 'update'])->middleware('role:admin');
+        Route::patch('/users/{id}', [UserController::class, 'update'])->middleware('role:admin');
+        Route::delete('/users/{id}', [UserController::class, 'destroy'])->middleware('role:admin');
+
         Route::get('/branches', [BranchController::class, 'index']);
+        Route::get('/branches/active', [BranchController::class, 'active']);
         Route::post('/branches', [BranchController::class, 'store'])->middleware('role:admin');
         Route::get('/branches/{id}', [BranchController::class, 'show']);
         Route::put('/branches/{id}', [BranchController::class, 'update'])->middleware('role:admin');
@@ -121,6 +130,7 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::prefix('reports')->group(function () {
+            Route::get('/financial', [ReportController::class, 'financial']);
             Route::get('/sales', [ReportController::class, 'sales']);
             Route::get('/inventory', [ReportController::class, 'inventory']);
             Route::get('/customers', [ReportController::class, 'customers']);

@@ -12,6 +12,7 @@ Guide for the **Flutter Windows ERP** client: what changed on the API, what to b
 | Categories & units API | [part-categories-units-api.md](./part-categories-units-api.md) |
 | Postman | `postman/ERB-Frezzer-API.postman_collection.json` |
 | **Flutter bug fixes (purchases, installments, returns)** | [flutter-app-fixes.md](./flutter-app-fixes.md) |
+| **May 2026 — dashboard profit, financial reports, users/branches** | [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md) |
 
 ---
 

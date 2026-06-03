@@ -22,6 +22,11 @@ class BranchController extends Controller
         return BranchResource::collection($this->branches->paginate($request->user(), $perPage));
     }
 
+    public function active(Request $request): AnonymousResourceCollection
+    {
+        return BranchResource::collection($this->branches->allActive($request->user()));
+    }
+
     public function show(string $id): BranchResource
     {
         $branch = $this->branches->find($id);

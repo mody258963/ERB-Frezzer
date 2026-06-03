@@ -44,6 +44,6 @@ class InventoryService
         $before = ['stock' => 'adjusted'];
         $this->audit->record($user, 'inventory.adjust', 'stock', $data['part_id'].'|'.$data['branch_id'], $before, $data);
         $this->lowStock->notifyIfNeeded($data['part_id'], $data['branch_id']);
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
     }
 }

@@ -72,7 +72,7 @@ class SaturdaySettlementService
             return $settlement;
         });
 
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
 
         return $settlement;
     }

@@ -135,7 +135,7 @@ class PurchaseOrderService
             $po->save();
         });
 
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
 
         return $po->fresh(['items']);
     }
@@ -160,6 +160,6 @@ class PurchaseOrderService
         });
 
         $this->audit->record($user, 'purchase_order.cancel', 'purchase_order', $po->id, $before, null);
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
     }
 }

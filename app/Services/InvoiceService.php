@@ -11,6 +11,7 @@ use App\Models\Invoice;
 use App\Models\Part;
 use App\Models\User;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
+use App\Support\BranchAccess;
 use App\Repositories\Contracts\StockMovementRepositoryInterface;
 use App\Repositories\Contracts\StockRepositoryInterface;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,8 @@ class InvoiceService
      */
     public function create(User $user, array $data): Invoice
     {
+        BranchAccess::assertUserMayUseBranch($user, $data['branch_id']);
+
         $invoice = DB::transaction(function () use ($user, $data) {
             $failures = [];
 
@@ -140,7 +143,7 @@ class InvoiceService
             return $invoice->fresh(['items']);
         });
 
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
 
         return $invoice;
     }
@@ -182,6 +185,6 @@ class InvoiceService
         });
 
         $this->audit->record($user, 'invoice.cancel', 'invoice', $invoice->id, $before, null);
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
     }
 }

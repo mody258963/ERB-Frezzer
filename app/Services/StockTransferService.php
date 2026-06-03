@@ -83,7 +83,7 @@ class StockTransferService
         }
 
         $this->audit->record($user, 'transfer.complete', 'stock_transfer', $transfer->id, null, $transfer->fresh()->toArray());
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
 
         return $transfer->fresh(['items']);
     }

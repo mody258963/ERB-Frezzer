@@ -53,11 +53,12 @@ class ReturnService
             }
 
             $return->status = ReturnStatus::Completed;
+            $return->completed_at = now();
             $return->save();
         });
 
         $this->audit->record($user, 'return.approve', 'return', $return->id, null, $return->fresh()?->toArray());
-        $this->dashboardCache->forgetSummary();
+        $this->dashboardCache->forgetAllSummaries();
         $this->syncReferenceReturnStatus($return->fresh());
 
         return $return->fresh(['items']);
@@ -193,6 +194,7 @@ class ReturnService
         $return->save();
 
         $this->audit->record($user, 'return.reject', 'return', $return->id, $before, $return->toArray());
+        $this->dashboardCache->forgetAllSummaries();
         $this->syncReferenceReturnStatus($return->fresh());
 
         return $return;

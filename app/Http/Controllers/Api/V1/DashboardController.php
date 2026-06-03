@@ -21,7 +21,13 @@ class DashboardController extends Controller
 
     public function summary(Request $request): DashboardSummaryResource
     {
-        return new DashboardSummaryResource($this->dashboard->summary());
+        $request->validate([
+            'branch_id' => ['nullable', 'uuid'],
+        ]);
+
+        return new DashboardSummaryResource(
+            $this->dashboard->summary($request->query('branch_id'))
+        );
     }
 
     public function inventory(Request $request): AnonymousResourceCollection
@@ -41,7 +47,13 @@ class DashboardController extends Controller
 
     public function sales(Request $request): DashboardSalesResource
     {
-        return new DashboardSalesResource($this->dashboard->sales());
+        $request->validate([
+            'branch_id' => ['nullable', 'uuid'],
+        ]);
+
+        return new DashboardSalesResource(
+            $this->dashboard->sales($request->query('branch_id'))
+        );
     }
 
     public function activity(Request $request): AnonymousResourceCollection

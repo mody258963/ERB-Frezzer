@@ -49,6 +49,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $mainBranchId = (string) Branch::query()->value('id');
 
         $auth()->getJson('/api/v1/branches')->assertOk();
+        $auth()->getJson('/api/v1/branches/active')->assertOk();
         $auth()->getJson("/api/v1/branches/{$mainBranchId}")->assertOk();
 
         $warehouse = $auth()->postJson('/api/v1/branches', [
@@ -320,7 +321,9 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $auth()->getJson('/api/v1/dashboard/sales')->assertOk();
         $auth()->getJson('/api/v1/dashboard/activity')->assertOk();
 
+        $auth()->getJson('/api/v1/reports/financial')->assertOk();
         $auth()->getJson('/api/v1/reports/sales')->assertOk();
+        $auth()->getJson('/api/v1/users')->assertOk();
         $auth()->getJson('/api/v1/reports/inventory')->assertOk();
         $auth()->getJson('/api/v1/reports/customers')->assertOk();
         $auth()->getJson('/api/v1/reports/suppliers')->assertOk();
