@@ -75,7 +75,7 @@ Bind these fields (not only sales):
 | `unpaid_installments_total` | Any unpaid installment balance |
 | `total_stock_value_cost` | After **receive** purchase |
 
-**Pay installment:** `POST /installments/{id}/pay` with `{ "payment_method": "cash" }` — hide Pay when `is_paid == true`.
+**Pay installment:** `POST /installments/{id}/pay` with `{ "payment_method": "cash" }` — optional `"amount": 10000` for partial pay. Hide Pay when `balance_due == 0`. See [flutter-supplier-installment-partial-pay.md](./flutter-supplier-installment-partial-pay.md).
 
 **Payables detail:** `GET /dashboard/payables` → `upcoming_30_days`, `overdue`.
 
@@ -227,7 +227,7 @@ Future<void> _payInstallment(SupplierInstallment inst) async {
 ```
 
 **API:** `POST /api/v1/installments/{id}/pay`  
-Body: `{ "payment_method": "cash" }` (or `bank_transfer`, `check`)
+Body: `{ "payment_method": "cash", "amount": 10000 }` — `amount` optional (partial pay); omit to pay full `balance_due`. See [flutter-supplier-installment-partial-pay.md](./flutter-supplier-installment-partial-pay.md).
 
 ---
 

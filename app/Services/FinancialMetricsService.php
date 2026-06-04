@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\ProductReturn;
 use App\Models\PurchaseOrder;
 use App\Models\SupplierInstallment;
+use App\Models\SupplierInstallmentPayment;
 use Carbon\CarbonInterface;
 class FinancialMetricsService
 {
@@ -207,13 +208,12 @@ class FinancialMetricsService
         CarbonInterface $to,
         ?string $branchId = null,
     ): array {
-        $paymentsQuery = SupplierInstallment::query()
-            ->where('is_paid', true)
+        $paymentsQuery = SupplierInstallmentPayment::query()
             ->where('paid_at', '>=', $from)
             ->where('paid_at', '<=', $to);
 
         if ($branchId !== null) {
-            $paymentsQuery->whereHas('purchaseOrder', fn ($q) => $q->where('branch_id', $branchId));
+            $paymentsQuery->whereHas('installment.purchaseOrder', fn ($q) => $q->where('branch_id', $branchId));
         }
 
         $orderedQuery = PurchaseOrder::query()
@@ -233,7 +233,8 @@ class FinancialMetricsService
             $receivedQuery->where('branch_id', $branchId);
         }
 
-        $unpaidQuery = SupplierInstallment::query()->where('is_paid', false);
+        $unpaidQuery = SupplierInstallment::query()
+            ->whereColumn('amount_paid', '<', 'amount');
         if ($branchId !== null) {
             $unpaidQuery->whereHas('purchaseOrder', fn ($q) => $q->where('branch_id', $branchId));
         }
@@ -244,8 +245,12 @@ class FinancialMetricsService
             'weekly_supplier_payments' => (float) (clone $paymentsQuery)->sum('amount'),
             'weekly_purchases_ordered' => (float) (clone $orderedQuery)->sum('total_amount'),
             'weekly_purchases_received' => (float) (clone $receivedQuery)->sum('total_amount'),
-            'unpaid_installments_total' => (float) (clone $unpaidQuery)->sum('amount'),
-            'overdue_installments_total' => (float) (clone $overdueQuery)->sum('amount'),
+            'unpaid_installments_total' => (float) (clone $unpaidQuery)
+                ->selectRaw('SUM(amount - amount_paid) as balance')
+                ->value('balance'),
+            'overdue_installments_total' => (float) (clone $overdueQuery)
+                ->selectRaw('SUM(amount - amount_paid) as balance')
+                ->value('balance'),
             'unpaid_installments_count' => (int) (clone $unpaidQuery)->count(),
         ];
     }

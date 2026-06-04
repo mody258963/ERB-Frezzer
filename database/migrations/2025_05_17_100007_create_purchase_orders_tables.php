@@ -40,6 +40,7 @@ return new class extends Migration
             $table->foreignUuid('supplier_id')->constrained('suppliers');
             $table->unsignedInteger('installment_no');
             $table->decimal('amount', 12, 2);
+            $table->decimal('amount_paid', 12, 2)->default(0);
             $table->date('due_date');
             $table->boolean('is_paid')->default(false);
             $table->timestamp('paid_at')->nullable();
@@ -51,10 +52,26 @@ return new class extends Migration
             $table->index(['supplier_id', 'is_paid']);
             $table->index('due_date');
         });
+
+        Schema::create('supplier_installment_payments', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->foreignUuid('installment_id')->constrained('supplier_installments')->cascadeOnDelete();
+            $table->foreignUuid('supplier_id')->constrained('suppliers');
+            $table->foreignUuid('po_id')->constrained('purchase_orders')->cascadeOnDelete();
+            $table->decimal('amount', 12, 2);
+            $table->string('payment_method', 32);
+            $table->foreignUuid('paid_by')->constrained('users');
+            $table->text('notes')->nullable();
+            $table->timestamp('paid_at')->useCurrent();
+
+            $table->index(['supplier_id', 'paid_at']);
+            $table->index(['installment_id', 'paid_at']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('supplier_installment_payments');
         Schema::dropIfExists('supplier_installments');
         Schema::dropIfExists('purchase_order_items');
         Schema::dropIfExists('purchase_orders');

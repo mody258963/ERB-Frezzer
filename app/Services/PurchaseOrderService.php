@@ -74,6 +74,7 @@ class PurchaseOrderService
                         'supplier_id' => $supplier->id,
                         'installment_no' => $i,
                         'amount' => $each,
+                        'amount_paid' => '0',
                         'due_date' => isset($data['installment_start_date'])
                             ? Carbon::parse($data['installment_start_date'])->addMonths($i - 1)->toDateString()
                             : now()->addMonths($i - 1)->toDateString(),
@@ -91,6 +92,7 @@ class PurchaseOrderService
                     'supplier_id' => $supplier->id,
                     'installment_no' => 1,
                     'amount' => $calculated,
+                    'amount_paid' => '0',
                     'due_date' => now()->toDateString(),
                     'is_paid' => false,
                     'paid_at' => null,

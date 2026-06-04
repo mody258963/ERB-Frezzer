@@ -40,7 +40,8 @@ class InstallmentController extends Controller
     {
         $data = $request->validate([
             'payment_method' => ['required', 'in:cash,bank_transfer,check'],
-            'notes' => ['nullable', 'string'],
+            'amount' => ['nullable', 'numeric', 'min:0.01'],
+            'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $inst = SupplierInstallment::query()->findOrFail($id);

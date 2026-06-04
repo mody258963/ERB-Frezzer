@@ -124,14 +124,23 @@ PATCH /purchases/{id}/receive
 - `weekly_purchases_received` → PO total  
 - `total_stock_value_cost` → increases  
 
-**3. Pay one installment** (25,000)
+**3. Pay one installment** (25,000 full or partial)
 
 ```http
 POST /installments/{id}/pay
 { "payment_method": "cash" }
 ```
 
-Only if `is_paid == false`.
+Pay a **custom amount** (partial):
+
+```http
+POST /installments/{id}/pay
+{ "payment_method": "cash", "amount": 10000 }
+```
+
+Omit `amount` to pay the full remaining `balance_due`. See [flutter-supplier-installment-partial-pay.md](./flutter-supplier-installment-partial-pay.md).
+
+Only if `balance_due > 0` (installment not fully paid).
 
 **Dashboard after pay:**
 

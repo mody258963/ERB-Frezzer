@@ -20,6 +20,8 @@ final class SupplierInstallmentTransformer
             'supplier_id' => $installment->supplier_id,
             'installment_no' => (int) $installment->installment_no,
             'amount' => (float) $installment->amount,
+            'amount_paid' => (float) $installment->amount_paid,
+            'balance_due' => (float) $installment->balanceDue(),
             'due_date' => $installment->due_date?->format('Y-m-d'),
             'is_paid' => $installment->is_paid,
             'paid_at' => $installment->paid_at?->toISOString(),

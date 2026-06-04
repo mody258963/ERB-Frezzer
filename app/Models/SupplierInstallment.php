@@ -14,7 +14,7 @@ class SupplierInstallment extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'po_id', 'supplier_id', 'installment_no', 'amount', 'due_date', 'is_paid', 'paid_at',
+        'po_id', 'supplier_id', 'installment_no', 'amount', 'amount_paid', 'due_date', 'is_paid', 'paid_at',
         'payment_method', 'paid_by', 'notes', 'created_at',
     ];
 
@@ -22,6 +22,7 @@ class SupplierInstallment extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'amount_paid' => 'decimal:2',
             'due_date' => 'date',
             'is_paid' => 'boolean',
             'paid_at' => 'datetime',
@@ -43,5 +44,12 @@ class SupplierInstallment extends Model
     public function paidByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'paid_by');
+    }
+
+    public function balanceDue(): string
+    {
+        $balance = bcsub((string) $this->amount, (string) $this->amount_paid, 2);
+
+        return bccomp($balance, '0', 2) < 0 ? '0.00' : $balance;
     }
 }
