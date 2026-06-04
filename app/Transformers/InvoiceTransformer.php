@@ -12,7 +12,15 @@ final class InvoiceTransformer
     /**
      * @return array<string, mixed>
      */
-    public static function transform(Invoice $invoice): array
+    /**
+     * @param  array<string, array{
+     *     quantity_sold: int,
+     *     quantity_returned_completed: int,
+     *     quantity_returned_pending: int,
+     *     quantity_available: int
+     * }>|null  $returnQuantitiesByPart
+     */
+    public static function transform(Invoice $invoice, ?array $returnQuantitiesByPart = null): array
     {
         $data = [
             'id' => $invoice->id,
@@ -46,7 +54,7 @@ final class InvoiceTransformer
 
         if ($invoice->relationLoaded('items')) {
             $data['items'] = $invoice->items
-                ->map(fn ($item) => InvoiceItemTransformer::transform($item))
+                ->map(fn ($item) => InvoiceItemTransformer::transform($item, $returnQuantitiesByPart))
                 ->values()
                 ->all();
         }

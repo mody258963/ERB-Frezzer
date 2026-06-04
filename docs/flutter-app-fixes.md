@@ -285,7 +285,8 @@ await dashboardRepo.refreshSummary();
 
 Dashboard fields: `weekly_customer_refunds`, `weekly_net_sales`, `weekly_profit`.
 
-Full Arabic guide: [customer-returns-ar.md](./customer-returns-ar.md).
+Full Arabic guide: [customer-returns-ar.md](./customer-returns-ar.md).  
+Partial return + reprint: [flutter-invoice-partial-return-reprint.md](./flutter-invoice-partial-return-reprint.md).
 
 ---
 

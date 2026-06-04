@@ -2,7 +2,7 @@
 
 For the **erd_rezzer** / FrostParts Windows client talking to **ERB-Frezzer** (`https://api.tppower.shop/api/v1` or your server).
 
-Related: [flutter-dashboard-transactions-guide.md](./flutter-dashboard-transactions-guide.md) (**full transaction flows + dashboard fields**), [flutter-app-fixes.md](./flutter-app-fixes.md), [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [customer-returns-ar.md](./customer-returns-ar.md), [invoice-discount-accounting-ar.md](./invoice-discount-accounting-ar.md).
+Related: [flutter-dashboard-transactions-guide.md](./flutter-dashboard-transactions-guide.md) (**full transaction flows + dashboard fields**), [flutter-invoice-partial-return-reprint.md](./flutter-invoice-partial-return-reprint.md) (partial return + reprint), [flutter-mobile-inventory-intake.md](./flutter-mobile-inventory-intake.md) (mobile photo intake + dashboard/activity), [flutter-app-fixes.md](./flutter-app-fixes.md), [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [customer-returns-ar.md](./customer-returns-ar.md), [invoice-discount-accounting-ar.md](./invoice-discount-accounting-ar.md).
 
 ---
 

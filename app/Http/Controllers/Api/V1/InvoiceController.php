@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\InvoiceReceiptResource;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\MessageResource;
 use App\Models\Invoice;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
+use App\Services\InvoiceReturnContextService;
 use App\Services\InvoiceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +18,8 @@ class InvoiceController extends Controller
 {
     public function __construct(
         private InvoiceRepositoryInterface $invoices,
-        private InvoiceService $invoiceService
+        private InvoiceService $invoiceService,
+        private InvoiceReturnContextService $invoiceReturnContext,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -67,7 +70,20 @@ class InvoiceController extends Controller
         $inv = $this->invoices->findWithItems($id);
         abort_if(! $inv, 404);
 
-        return new InvoiceResource($inv);
+        return new InvoiceResource(
+            $inv,
+            $this->invoiceReturnContext->quantitiesByPart($inv),
+        );
+    }
+
+    public function receipt(string $id): InvoiceReceiptResource
+    {
+        $inv = $this->invoices->findWithItems($id);
+        abort_if(! $inv, 404);
+
+        return new InvoiceReceiptResource(
+            $this->invoiceReturnContext->receiptPayload($inv),
+        );
     }
 
     public function cancel(Request $request, string $id): JsonResponse

@@ -95,6 +95,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/invoices', [InvoiceController::class, 'store']);
         Route::get('/invoices/pending-credit', [InvoiceController::class, 'pendingCredit']);
         Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
+        Route::get('/invoices/{id}/receipt', [InvoiceController::class, 'receipt']);
         Route::patch('/invoices/{id}/cancel', [InvoiceController::class, 'cancel'])->middleware('role:admin,manager');
 
         Route::get('/settlements', [SettlementController::class, 'index']);

@@ -3,7 +3,7 @@
 Guide for **erd_rezzer** / FrostParts Windows app developers.  
 API base: `https://api.tppower.shop/api/v1` (or your server).
 
-**Related:** [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md), [flutter-app-fixes.md](./flutter-app-fixes.md), [customer-returns-ar.md](./customer-returns-ar.md)
+**Related:** [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md), [flutter-mobile-inventory-intake.md](./flutter-mobile-inventory-intake.md) (mobile intake + admin dashboard tab), [flutter-app-fixes.md](./flutter-app-fixes.md), [customer-returns-ar.md](./customer-returns-ar.md)
 
 ---
 

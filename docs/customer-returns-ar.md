@@ -66,4 +66,4 @@ PATCH /api/v1/returns/{id}/approve
 - اخفِ زر «مرتجع» إذا `invoice.return_status == 'returned'`.
 - بعد 422 اعرض `failures[].available` (الكمية المتبقية للإرجاع).
 
-انظر أيضاً: [flutter-app-fixes.md](./flutter-app-fixes.md) §4.
+انظر أيضاً: [flutter-app-fixes.md](./flutter-app-fixes.md) §4، [flutter-invoice-partial-return-reprint.md](./flutter-invoice-partial-return-reprint.md) (مرتجع جزئي + إعادة طباعة).
