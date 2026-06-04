@@ -8,6 +8,8 @@ use App\Enums\ReturnType;
 use App\Models\Branch;
 use App\Models\Invoice;
 use App\Models\ProductReturn;
+use App\Models\PurchaseOrder;
+use App\Models\SupplierInstallment;
 use Carbon\CarbonInterface;
 class FinancialMetricsService
 {
@@ -190,6 +192,64 @@ class FinancialMetricsService
      *
      * @return array<string, float>
      */
+    /**
+     * @return array{
+     *     weekly_supplier_payments: float,
+     *     weekly_purchases_ordered: float,
+     *     weekly_purchases_received: float,
+     *     unpaid_installments_total: float,
+     *     overdue_installments_total: float,
+     *     unpaid_installments_count: int
+     * }
+     */
+    public function supplierMetrics(
+        CarbonInterface $from,
+        CarbonInterface $to,
+        ?string $branchId = null,
+    ): array {
+        $paymentsQuery = SupplierInstallment::query()
+            ->where('is_paid', true)
+            ->where('paid_at', '>=', $from)
+            ->where('paid_at', '<=', $to);
+
+        if ($branchId !== null) {
+            $paymentsQuery->whereHas('purchaseOrder', fn ($q) => $q->where('branch_id', $branchId));
+        }
+
+        $orderedQuery = PurchaseOrder::query()
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to);
+
+        if ($branchId !== null) {
+            $orderedQuery->where('branch_id', $branchId);
+        }
+
+        $receivedQuery = PurchaseOrder::query()
+            ->whereNotNull('received_at')
+            ->where('received_at', '>=', $from)
+            ->where('received_at', '<=', $to);
+
+        if ($branchId !== null) {
+            $receivedQuery->where('branch_id', $branchId);
+        }
+
+        $unpaidQuery = SupplierInstallment::query()->where('is_paid', false);
+        if ($branchId !== null) {
+            $unpaidQuery->whereHas('purchaseOrder', fn ($q) => $q->where('branch_id', $branchId));
+        }
+
+        $overdueQuery = (clone $unpaidQuery)->whereDate('due_date', '<', now()->toDateString());
+
+        return [
+            'weekly_supplier_payments' => (float) (clone $paymentsQuery)->sum('amount'),
+            'weekly_purchases_ordered' => (float) (clone $orderedQuery)->sum('total_amount'),
+            'weekly_purchases_received' => (float) (clone $receivedQuery)->sum('total_amount'),
+            'unpaid_installments_total' => (float) (clone $unpaidQuery)->sum('amount'),
+            'overdue_installments_total' => (float) (clone $overdueQuery)->sum('amount'),
+            'unpaid_installments_count' => (int) (clone $unpaidQuery)->count(),
+        ];
+    }
+
     public function customerRefundsByBranchId(CarbonInterface $from, CarbonInterface $to): array
     {
         return ProductReturn::query()

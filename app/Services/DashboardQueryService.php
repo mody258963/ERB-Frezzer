@@ -39,6 +39,7 @@ class DashboardQueryService
                 ->value('v') ?? 0;
 
             $metrics = $this->financialMetrics->totals($from, $to, $branchId);
+            $supplierMetrics = $this->financialMetrics->supplierMetrics($from, $to, $branchId);
             $capitalSetting = $this->capital->settings();
             $capitalAmount = (float) $capitalSetting->capital_amount;
             $capitalSnapshot = $this->capital->financingSnapshot($capitalAmount);
@@ -56,6 +57,12 @@ class DashboardQueryService
                 'weekly_net_sales' => $metrics['net_sales'],
                 'weekly_gross_profit' => $metrics['gross_profit'],
                 'weekly_profit' => $metrics['profit'],
+                'weekly_supplier_payments' => $supplierMetrics['weekly_supplier_payments'],
+                'weekly_purchases_ordered' => $supplierMetrics['weekly_purchases_ordered'],
+                'weekly_purchases_received' => $supplierMetrics['weekly_purchases_received'],
+                'unpaid_installments_total' => $supplierMetrics['unpaid_installments_total'],
+                'overdue_installments_total' => $supplierMetrics['overdue_installments_total'],
+                'unpaid_installments_count' => $supplierMetrics['unpaid_installments_count'],
             ];
         });
     }

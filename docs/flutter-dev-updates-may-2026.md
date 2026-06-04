@@ -2,7 +2,7 @@
 
 For the **erd_rezzer** / FrostParts Windows client talking to **ERB-Frezzer** (`https://api.tppower.shop/api/v1` or your server).
 
-Related: [flutter-app-fixes.md](./flutter-app-fixes.md), [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [customer-returns-ar.md](./customer-returns-ar.md), [invoice-discount-accounting-ar.md](./invoice-discount-accounting-ar.md).
+Related: [flutter-dashboard-transactions-guide.md](./flutter-dashboard-transactions-guide.md) (**full transaction flows + dashboard fields**), [flutter-app-fixes.md](./flutter-app-fixes.md), [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [customer-returns-ar.md](./customer-returns-ar.md), [invoice-discount-accounting-ar.md](./invoice-discount-accounting-ar.md).
 
 ---
 
@@ -20,8 +20,17 @@ Optional query: `?branch_id={uuid}` (admin only; branch users are scoped automat
 | `weekly_net_sales` | Invoice `total` minus refunds |
 | `weekly_gross_profit` | Sum of `(unit_price − cost_price) × qty` |
 | `weekly_profit` | Gross profit − discount − refunds |
+| `total_supplier_debt` | All unpaid supplier balance (updates when you order or pay installments) |
+| `weekly_supplier_payments` | Installments **paid this week** (`paid_at`) |
+| `weekly_purchases_ordered` | Purchase orders **created this week** |
+| `weekly_purchases_received` | POs **received into stock this week** |
+| `unpaid_installments_total` | Sum of unpaid installment amounts |
+| `unpaid_installments_count` | Count of unpaid installments |
+| `overdue_installments_total` | Unpaid installments past `due_date` |
 
-**UI:** Show **weekly profit** and **refunds**, not `weekly_revenue` alone.
+**UI:** Show **weekly profit** and **refunds**, not `weekly_revenue` alone.  
+**Purchases:** After creating a 100k PO with 4 installments, show `total_supplier_debt` and `unpaid_installments_total`. When paying one installment (25k), refresh summary — `weekly_supplier_payments` and debt should update.  
+Also use `GET /dashboard/payables` for upcoming/overdue installment lists.
 
 ### Sales breakdown `GET /api/v1/dashboard/sales`
 

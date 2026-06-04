@@ -71,6 +71,7 @@ class ReportQueryService
         }
 
         $capitalRow = $this->capital->showWithSnapshot();
+        $supplierMetrics = $this->financialMetrics->supplierMetrics($fromDate, $toDate, $branchId);
 
         return [
             'period' => [
@@ -85,6 +86,14 @@ class ReportQueryService
                 'capital_amount' => $capitalRow['capital_amount'],
                 'currency' => $capitalRow['currency'],
                 'financing_snapshot' => $capitalRow['financing_snapshot'],
+            ],
+            'suppliers' => [
+                'total_debt' => (float) \App\Models\Supplier::query()->sum('total_debt'),
+                'payments_in_period' => $supplierMetrics['weekly_supplier_payments'],
+                'purchases_ordered_in_period' => $supplierMetrics['weekly_purchases_ordered'],
+                'purchases_received_in_period' => $supplierMetrics['weekly_purchases_received'],
+                'unpaid_installments_total' => $supplierMetrics['unpaid_installments_total'],
+                'overdue_installments_total' => $supplierMetrics['overdue_installments_total'],
             ],
         ];
     }

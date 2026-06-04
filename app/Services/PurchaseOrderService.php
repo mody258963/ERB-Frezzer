@@ -30,7 +30,7 @@ class PurchaseOrderService
      */
     public function create(User $user, array $data): PurchaseOrder
     {
-        return DB::transaction(function () use ($user, $data) {
+        $po = DB::transaction(function () use ($user, $data) {
             $supplier = Supplier::query()->lockForUpdate()->findOrFail($data['supplier_id']);
 
             $items = [];
@@ -106,6 +106,10 @@ class PurchaseOrderService
 
             return $po->fresh(['items', 'installments']);
         });
+
+        $this->dashboardCache->forgetAllSummaries();
+
+        return $po;
     }
 
     public function receive(User $user, PurchaseOrder $po): PurchaseOrder

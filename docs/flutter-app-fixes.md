@@ -55,7 +55,33 @@ Roles: `admin`, `manager`, `warehouse`
 
 ---
 
-## 2. Hide “Receive” when PO already received
+## 2. Dashboard — supplier purchases & installment payments
+
+### Problem
+
+Creating a purchase (e.g. 100,000 EGP in 4 installments) or paying an installment did not change dashboard numbers — the app only showed sales (`weekly_revenue`).
+
+### Fix
+
+**Refresh** `GET /dashboard/summary` after create purchase, receive goods, or pay installment.
+
+Bind these fields (not only sales):
+
+| Field | When it changes |
+|-------|-----------------|
+| `total_supplier_debt` | PO created (↑) or installment paid (↓) |
+| `weekly_purchases_ordered` | PO created this week |
+| `weekly_supplier_payments` | Installment paid this week |
+| `unpaid_installments_total` | Any unpaid installment balance |
+| `total_stock_value_cost` | After **receive** purchase |
+
+**Pay installment:** `POST /installments/{id}/pay` with `{ "payment_method": "cash" }` — hide Pay when `is_paid == true`.
+
+**Payables detail:** `GET /dashboard/payables` → `upcoming_30_days`, `overdue`.
+
+---
+
+## 3. Hide “Receive” when PO already received
 
 ### Problem
 
@@ -124,7 +150,7 @@ if (purchase.canReceive && userCanReceive) // role: admin, manager, warehouse
 
 ---
 
-## 3. Pay installment — disable when already paid
+## 4. Pay installment — disable when already paid
 
 ### Problem
 
@@ -205,7 +231,7 @@ Body: `{ "payment_method": "cash" }` (or `bank_transfer`, `check`)
 
 ---
 
-## 4. Returns — stock + money back on dashboard
+## 5. Returns — stock + money back on dashboard
 
 ### Problem
 
@@ -263,7 +289,7 @@ Full Arabic guide: [customer-returns-ar.md](./customer-returns-ar.md).
 
 ---
 
-## 5. POS — line price override (optional `unit_price`)
+## 6. POS — line price override (optional `unit_price`)
 
 **API:** `POST /api/v1/invoices`
 
@@ -281,7 +307,7 @@ See [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md) §2
 
 ---
 
-## 6. Part image upload
+## 7. Part image upload
 
 **API:** `POST /api/v1/parts/{id}/image` — multipart field **`image`**, max **2 MB**.
 
@@ -300,7 +326,7 @@ See [part-image-api.md](./part-image-api.md) and [flutter-add-part.md](./flutter
 
 ---
 
-## 7. Settings — part categories
+## 8. Settings — part categories
 
 **API:** `GET/POST/PUT/DELETE /api/v1/part-categories`  
 Admin/manager only. Online only.
@@ -309,7 +335,7 @@ See [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md) §4
 
 ---
 
-## 8. Base URL and login
+## 9. Base URL and login
 
 Postman / app `baseUrl` must be the **ERB-Frezzer** API host, for example:
 
@@ -325,7 +351,7 @@ If you see **404** on `auth/login`, the request is hitting the **wrong project**
 
 ---
 
-## 9. Checklist (copy for PR)
+## 10. Checklist (copy for PR)
 
 - [ ] `purchase_repository.dart` — receive uses **PATCH** only  
 - [ ] `purchases_screen.dart` — `canReceive` from `received_at` + `status`  
@@ -338,7 +364,7 @@ If you see **404** on `auth/login`, the request is hitting the **wrong project**
 
 ---
 
-## 10. Quick reference — HTTP methods
+## 11. Quick reference — HTTP methods
 
 | Action | Method | Path |
 |--------|--------|------|

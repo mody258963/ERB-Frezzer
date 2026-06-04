@@ -421,6 +421,7 @@ POST /api/v1/part-categories
 
 | Topic | Document |
 |-------|----------|
+| **Mobile intake (camera → part → stock)** | [flutter-mobile-inventory-intake.md](./flutter-mobile-inventory-intake.md) |
 | Categories & units | [part-categories-units-api.md](./part-categories-units-api.md) |
 | Full Windows ERP app | [flutter-windows-pos-offline-guide.md](./flutter-windows-pos-offline-guide.md) |
 | Recent updates (POS price, images, Settings categories) | [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md) |

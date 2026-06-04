@@ -23,6 +23,12 @@ final class DashboardSummaryTransformer
             'weekly_net_sales' => (float) ($row['weekly_net_sales'] ?? 0),
             'weekly_gross_profit' => (float) ($row['weekly_gross_profit'] ?? 0),
             'weekly_profit' => (float) ($row['weekly_profit'] ?? 0),
+            'weekly_supplier_payments' => (float) ($row['weekly_supplier_payments'] ?? 0),
+            'weekly_purchases_ordered' => (float) ($row['weekly_purchases_ordered'] ?? 0),
+            'weekly_purchases_received' => (float) ($row['weekly_purchases_received'] ?? 0),
+            'unpaid_installments_total' => (float) ($row['unpaid_installments_total'] ?? 0),
+            'overdue_installments_total' => (float) ($row['overdue_installments_total'] ?? 0),
+            'unpaid_installments_count' => (int) ($row['unpaid_installments_count'] ?? 0),
         ];
     }
 }
