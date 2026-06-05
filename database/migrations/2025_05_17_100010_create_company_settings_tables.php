@@ -19,17 +19,32 @@ return new class extends Migration
 
         Schema::create('capital_adjustments', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->string('type', 32)->default('manual_set');
             $table->decimal('previous_amount', 14, 2);
             $table->decimal('new_amount', 14, 2);
             $table->decimal('change_amount', 14, 2);
             $table->text('reason')->nullable();
             $table->foreignUuid('created_by')->constrained('users');
             $table->timestamps();
+
+            $table->index('type');
+        });
+
+        Schema::create('owner_cash_outs', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->decimal('amount', 14, 2);
+            $table->text('reason')->nullable();
+            $table->text('notes')->nullable();
+            $table->foreignUuid('created_by')->constrained('users');
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->index('created_at');
         });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('owner_cash_outs');
         Schema::dropIfExists('capital_adjustments');
         Schema::dropIfExists('company_settings');
     }

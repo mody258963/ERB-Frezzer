@@ -2,22 +2,20 @@
 
 namespace App\Transformers;
 
-use App\Models\CapitalAdjustment;
+use App\Models\OwnerCashOut;
 
-final class CapitalAdjustmentTransformer
+final class OwnerCashOutTransformer
 {
     /**
      * @return array<string, mixed>
      */
-    public static function transform(CapitalAdjustment $row): array
+    public static function transform(OwnerCashOut $row): array
     {
         return [
             'id' => $row->id,
-            'type' => $row->type?->value ?? 'manual_set',
-            'previous_amount' => (float) $row->previous_amount,
-            'new_amount' => (float) $row->new_amount,
-            'change_amount' => (float) $row->change_amount,
+            'amount' => (float) $row->amount,
             'reason' => $row->reason,
+            'notes' => $row->notes,
             'created_by' => $row->creator ? [
                 'id' => $row->creator->id,
                 'name' => $row->creator->name,

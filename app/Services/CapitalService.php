@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\CapitalAdjustmentType;
 use App\Models\CapitalAdjustment;
 use App\Models\CompanySetting;
+use App\Models\OwnerCashOut;
 use App\Models\Customer;
 use App\Models\Stock;
 use App\Models\Supplier;
@@ -55,6 +57,7 @@ class CapitalService
         $change = (float) bcsub((string) $newAmount, (string) $previous, 2);
 
         CapitalAdjustment::query()->create([
+            'type' => CapitalAdjustmentType::ManualSet,
             'previous_amount' => $previous,
             'new_amount' => $newAmount,
             'change_amount' => $change,
@@ -77,6 +80,64 @@ class CapitalService
         return CapitalAdjustment::query()
             ->with('creator')
             ->latest()
+            ->paginate($perPage);
+    }
+
+    /**
+     * Owner withdraws cash from the business — reduces recorded capital.
+     *
+     * @return array{cash_out: OwnerCashOut, settings: array<string, mixed>}
+     */
+    public function cashOut(User $user, float $amount, ?string $reason = null, ?string $notes = null): array
+    {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Cash out amount must be greater than zero.');
+        }
+
+        $setting = $this->settings();
+        $previous = (float) $setting->capital_amount;
+
+        if (bccomp((string) $amount, (string) $previous, 2) > 0) {
+            throw new \InvalidArgumentException(
+                'Cash out amount exceeds business capital ('.number_format($previous, 2).').',
+            );
+        }
+
+        $newAmount = (float) bcsub((string) $previous, (string) $amount, 2);
+        $change = (float) bcmul((string) $amount, '-1', 2);
+
+        $cashOut = OwnerCashOut::query()->create([
+            'amount' => $amount,
+            'reason' => $reason,
+            'notes' => $notes,
+            'created_by' => $user->id,
+            'created_at' => now(),
+        ]);
+
+        CapitalAdjustment::query()->create([
+            'type' => CapitalAdjustmentType::OwnerCashOut,
+            'previous_amount' => $previous,
+            'new_amount' => $newAmount,
+            'change_amount' => $change,
+            'reason' => $reason ?? 'Owner cash out',
+            'created_by' => $user->id,
+        ]);
+
+        $setting->capital_amount = $newAmount;
+        $setting->updated_by = $user->id;
+        $setting->save();
+
+        return [
+            'cash_out' => $cashOut->load('creator'),
+            'settings' => $this->showWithSnapshot(),
+        ];
+    }
+
+    public function cashOuts(int $perPage = 25): LengthAwarePaginator
+    {
+        return OwnerCashOut::query()
+            ->with('creator')
+            ->orderByDesc('created_at')
             ->paginate($perPage);
     }
 

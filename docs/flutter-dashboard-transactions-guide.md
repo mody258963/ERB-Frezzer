@@ -87,6 +87,15 @@ PUT /settings/capital
 
 Read: `GET /settings/capital` (includes `financing_snapshot`).
 
+**Owner takes money out of the business:**
+
+```http
+POST /settings/capital/cash-out
+{ "amount": 15000, "reason": "Owner draw" }
+```
+
+Reduces `business_capital` on dashboard. See [flutter-owner-cash-out.md](./flutter-owner-cash-out.md).
+
 ---
 
 ### B. Supplier purchase with installments (e.g. 100,000 EGP × 4)

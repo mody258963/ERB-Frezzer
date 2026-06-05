@@ -30,6 +30,15 @@ class InvoicePartialReturnReceiptTest extends TestCase
         $this->token = (string) $login->json('token');
     }
 
+    public function test_invoice_list_does_not_error_with_resource_collection(): void
+    {
+        $this->createInvoiceWithTwoLines();
+
+        $this->withToken($this->token)->getJson('/api/v1/invoices?per_page=50')
+            ->assertOk()
+            ->assertJsonStructure(['data']);
+    }
+
     public function test_invoice_show_includes_return_quantities_per_line(): void
     {
         [$invoiceId, $partA, $partB, $branchId, $customerId] = $this->createInvoiceWithTwoLines();

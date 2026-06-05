@@ -53,6 +53,8 @@ Route::prefix('v1')->group(function () {
         Route::put('/settings/capital', [CapitalSettingsController::class, 'update'])->middleware('role:admin');
         Route::patch('/settings/capital', [CapitalSettingsController::class, 'update'])->middleware('role:admin');
         Route::get('/settings/capital/adjustments', [CapitalSettingsController::class, 'adjustments'])->middleware('role:admin');
+        Route::post('/settings/capital/cash-out', [CapitalSettingsController::class, 'cashOut'])->middleware('role:admin');
+        Route::get('/settings/capital/cash-outs', [CapitalSettingsController::class, 'cashOuts'])->middleware('role:admin');
 
         Route::get('/part-units', [PartUnitController::class, 'index']);
 

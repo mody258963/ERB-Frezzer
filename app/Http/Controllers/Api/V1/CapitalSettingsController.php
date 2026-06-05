@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CapitalAdjustmentResource;
 use App\Http\Resources\CapitalSettingsResource;
+use App\Http\Resources\OwnerCashOutResource;
+use App\Http\Resources\OwnerCashOutResultResource;
 use App\Services\AuditLogService;
 use App\Services\CapitalService;
 use App\Services\DashboardCacheService;
@@ -59,6 +61,43 @@ class CapitalSettingsController extends Controller
     {
         return CapitalAdjustmentResource::collection(
             $this->capital->adjustments((int) $request->query('per_page', 25))
+        );
+    }
+
+    public function cashOut(Request $request): OwnerCashOutResultResource
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $before = $this->capital->showWithSnapshot();
+        $result = $this->capital->cashOut(
+            $request->user(),
+            (float) $data['amount'],
+            $data['reason'] ?? null,
+            $data['notes'] ?? null,
+        );
+
+        $this->audit->record(
+            $request->user(),
+            'owner.cash_out',
+            'owner_cash_out',
+            $result['cash_out']->id,
+            $before,
+            $result['settings'],
+        );
+
+        $this->dashboardCache->forgetAllSummaries();
+
+        return new OwnerCashOutResultResource($result);
+    }
+
+    public function cashOuts(Request $request): AnonymousResourceCollection
+    {
+        return OwnerCashOutResource::collection(
+            $this->capital->cashOuts((int) $request->query('per_page', 25))
         );
     }
 }

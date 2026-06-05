@@ -2,31 +2,29 @@
 
 namespace App\Models;
 
-use App\Enums\CapitalAdjustmentType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CapitalAdjustment extends Model
+class OwnerCashOut extends Model
 {
     use HasUuids;
 
+    public $timestamps = false;
+
     protected $fillable = [
-        'type',
-        'previous_amount',
-        'new_amount',
-        'change_amount',
+        'amount',
         'reason',
+        'notes',
         'created_by',
+        'created_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'type' => CapitalAdjustmentType::class,
-            'previous_amount' => 'decimal:2',
-            'new_amount' => 'decimal:2',
-            'change_amount' => 'decimal:2',
+            'amount' => 'decimal:2',
+            'created_at' => 'datetime',
         ];
     }
 
