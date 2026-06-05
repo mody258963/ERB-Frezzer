@@ -10,13 +10,18 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class InvoiceResource extends JsonResource
 {
     /**
-     * @param  array<string, array<string, int>>|null  $returnQuantitiesByPart
+     * @var array<string, array<string, int>>|null
      */
-    public function __construct(
-        $resource,
-        protected ?array $returnQuantitiesByPart = null,
-    ) {
-        parent::__construct($resource);
+    protected ?array $returnQuantitiesByPart = null;
+
+    /**
+     * @param  array<string, array<string, int>>  $context
+     */
+    public function withReturnContext(array $context): static
+    {
+        $this->returnQuantitiesByPart = $context;
+
+        return $this;
     }
 
     /**

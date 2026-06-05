@@ -70,10 +70,8 @@ class InvoiceController extends Controller
         $inv = $this->invoices->findWithItems($id);
         abort_if(! $inv, 404);
 
-        return new InvoiceResource(
-            $inv,
-            $this->invoiceReturnContext->quantitiesByPart($inv),
-        );
+        return (new InvoiceResource($inv))
+            ->withReturnContext($this->invoiceReturnContext->quantitiesByPart($inv));
     }
 
     public function receipt(string $id): InvoiceReceiptResource
