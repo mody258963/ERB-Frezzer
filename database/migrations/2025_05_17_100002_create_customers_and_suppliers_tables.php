@@ -31,10 +31,32 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
+
+        Schema::table('customers', function (Blueprint $table) {
+            $table->foreignUuid('linked_supplier_id')->nullable()->after('last_settled_at')->constrained('suppliers')->nullOnDelete();
+            $table->unique('linked_supplier_id');
+        });
+
+        Schema::create('contra_settlements', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->foreignUuid('customer_id')->constrained('customers');
+            $table->foreignUuid('supplier_id')->constrained('suppliers');
+            $table->decimal('amount', 12, 2);
+            $table->text('notes')->nullable();
+            $table->foreignUuid('created_by')->constrained('users');
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->index(['customer_id', 'created_at']);
+            $table->index(['supplier_id', 'created_at']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('contra_settlements');
+        Schema::table('customers', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('linked_supplier_id');
+        });
         Schema::dropIfExists('suppliers');
         Schema::dropIfExists('customers');
     }

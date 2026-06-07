@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Supplier extends Model
 {
@@ -20,6 +21,11 @@ class Supplier extends Model
             'total_debt' => 'decimal:2',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function linkedCustomer(): HasOne
+    {
+        return $this->hasOne(Customer::class, 'linked_supplier_id');
     }
 
     public function purchaseOrders(): HasMany

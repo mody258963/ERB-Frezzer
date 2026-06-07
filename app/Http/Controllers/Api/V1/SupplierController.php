@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\LinkedPartyBalanceResource;
 use App\Http\Resources\SupplierDebtResource;
 use App\Http\Resources\SupplierResource;
 use App\Models\PurchaseOrder;
 use App\Models\SupplierInstallment;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
+use App\Services\ContraSettlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -15,7 +17,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class SupplierController extends Controller
 {
     public function __construct(
-        private SupplierRepositoryInterface $suppliers
+        private SupplierRepositoryInterface $suppliers,
+        private ContraSettlementService $contraSettlements,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -44,7 +47,7 @@ class SupplierController extends Controller
         $s = $this->suppliers->find($id);
         abort_if(! $s, 404);
 
-        return new SupplierResource($s);
+        return new SupplierResource($s->load('linkedCustomer'));
     }
 
     public function update(Request $request, string $id): SupplierResource
@@ -91,5 +94,15 @@ class SupplierController extends Controller
             'purchase_orders' => $pos,
             'installments' => $installments,
         ]);
+    }
+
+    public function linkedBalance(string $id): LinkedPartyBalanceResource
+    {
+        $supplier = $this->suppliers->find($id);
+        abort_if(! $supplier, 404);
+
+        return new LinkedPartyBalanceResource(
+            $this->contraSettlements->netBalanceForSupplier($supplier->load('linkedCustomer'))
+        );
     }
 }

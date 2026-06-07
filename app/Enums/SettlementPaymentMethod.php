@@ -7,4 +7,5 @@ enum SettlementPaymentMethod: string
     case Cash = 'cash';
     case BankTransfer = 'bank_transfer';
     case Check = 'check';
+    case Offset = 'offset';
 }

@@ -27,6 +27,7 @@ final class FinancialReportTransformer
                 'revenue' => (float) ($totals['revenue'] ?? 0),
                 'discount' => (float) ($totals['discount'] ?? 0),
                 'customer_refunds' => (float) ($totals['customer_refunds'] ?? 0),
+                'customer_refund_profit_impact' => (float) ($totals['customer_refund_profit_impact'] ?? 0),
                 'net_sales' => (float) ($totals['net_sales'] ?? 0),
                 'gross_profit' => (float) ($totals['gross_profit'] ?? 0),
                 'profit' => (float) ($totals['profit'] ?? 0),

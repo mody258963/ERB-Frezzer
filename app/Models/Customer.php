@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CustomerType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
@@ -13,7 +14,7 @@ class Customer extends Model
 
     protected $fillable = [
         'name', 'type', 'phone', 'address', 'credit_limit', 'outstanding_balance',
-        'last_settled_at', 'is_active',
+        'last_settled_at', 'linked_supplier_id', 'is_active',
     ];
 
     protected function casts(): array
@@ -25,6 +26,16 @@ class Customer extends Model
             'last_settled_at' => 'datetime',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function linkedSupplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'linked_supplier_id');
+    }
+
+    public function contraSettlements(): HasMany
+    {
+        return $this->hasMany(ContraSettlement::class);
     }
 
     public function invoices(): HasMany

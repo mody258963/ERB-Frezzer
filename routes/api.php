@@ -92,6 +92,11 @@ Route::prefix('v1')->group(function () {
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->middleware('role:admin');
         Route::get('/customers/{id}/invoices', [CustomerController::class, 'invoices']);
         Route::get('/customers/{id}/balance', [CustomerController::class, 'balance']);
+        Route::post('/customers/{id}/payments', [CustomerController::class, 'collectPayment'])->middleware('role:admin,manager');
+        Route::get('/customers/{id}/payments', [CustomerController::class, 'payments']);
+        Route::get('/customers/{id}/linked-balance', [CustomerController::class, 'linkedBalance']);
+        Route::post('/customers/{id}/offset-supplier', [CustomerController::class, 'offsetSupplier'])->middleware('role:admin,manager');
+        Route::get('/customers/{id}/contra-settlements', [CustomerController::class, 'contraSettlements']);
 
         Route::get('/invoices', [InvoiceController::class, 'index']);
         Route::post('/invoices', [InvoiceController::class, 'store']);
@@ -111,6 +116,7 @@ Route::prefix('v1')->group(function () {
         Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->middleware('role:admin,manager');
         Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->middleware('role:admin');
         Route::get('/suppliers/{id}/debt', [SupplierController::class, 'debt']);
+        Route::get('/suppliers/{id}/linked-balance', [SupplierController::class, 'linkedBalance']);
 
         Route::get('/purchases', [PurchaseController::class, 'index']);
         Route::post('/purchases', [PurchaseController::class, 'store'])->middleware('role:admin,manager');

@@ -56,6 +56,7 @@ class DashboardQueryService
                 'weekly_customer_refunds' => $metrics['customer_refunds'],
                 'weekly_net_sales' => $metrics['net_sales'],
                 'weekly_gross_profit' => $metrics['gross_profit'],
+                'weekly_customer_refund_profit_impact' => $metrics['customer_refund_profit_impact'],
                 'weekly_profit' => $metrics['profit'],
                 'weekly_supplier_payments' => $supplierMetrics['weekly_supplier_payments'],
                 'weekly_purchases_ordered' => $supplierMetrics['weekly_purchases_ordered'],

@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Enums\ReturnResolution;
 use App\Enums\ReturnStatus;
 use App\Enums\ReturnType;
+use App\Enums\SettlementPaymentMethod;
 use App\Models\Branch;
 use App\Models\Invoice;
 use App\Models\ProductReturn;
 use App\Models\PurchaseOrder;
+use App\Models\ReturnItem;
 use App\Models\SupplierInstallment;
 use App\Models\SupplierInstallmentPayment;
 use Carbon\CarbonInterface;
@@ -63,6 +65,7 @@ class FinancialMetricsService
             ->value('p') ?? 0);
 
         $customerRefunds = $this->sumCustomerRefunds($from, $to, $branchId);
+        $refundProfitImpact = $this->sumCustomerRefundProfitImpact($from, $to, $branchId);
 
         $netSales = (float) bcsub((string) $invoiceTotal, (string) $customerRefunds, 2);
         if (bccomp((string) $netSales, '0', 2) < 0) {
@@ -71,7 +74,7 @@ class FinancialMetricsService
 
         $profit = (float) bcsub(
             bcsub((string) $grossProfit, (string) $discount, 2),
-            (string) $customerRefunds,
+            (string) $refundProfitImpact,
             2
         );
         if (bccomp((string) $profit, '0', 2) < 0) {
@@ -82,6 +85,7 @@ class FinancialMetricsService
             'revenue' => $revenue,
             'discount' => $discount,
             'customer_refunds' => $customerRefunds,
+            'customer_refund_profit_impact' => $refundProfitImpact,
             'net_sales' => $netSales,
             'gross_profit' => $grossProfit,
             'profit' => $profit,
@@ -159,6 +163,38 @@ class FinancialMetricsService
             ->sum('total_value');
     }
 
+    private function sumCustomerRefundProfitImpact(
+        CarbonInterface $from,
+        CarbonInterface $to,
+        ?string $branchId,
+    ): float {
+        $query = ReturnItem::query()
+            ->join('returns', 'returns.id', '=', 'return_items.return_id')
+            ->join('parts', 'parts.id', '=', 'return_items.part_id')
+            ->where('returns.status', ReturnStatus::Completed->value)
+            ->where('returns.return_type', ReturnType::CustomerReturn->value)
+            ->whereIn('returns.resolution', self::CUSTOMER_REFUND_RESOLUTIONS)
+            ->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereNotNull('returns.completed_at')
+                        ->where('returns.completed_at', '>=', $from)
+                        ->where('returns.completed_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->whereNull('returns.completed_at')
+                        ->where('returns.updated_at', '>=', $from)
+                        ->where('returns.updated_at', '<=', $to);
+                });
+            });
+
+        if ($branchId !== null) {
+            $query->where('returns.branch_id', $branchId);
+        }
+
+        return (float) ($query
+            ->selectRaw('SUM((return_items.unit_price - parts.cost_price) * return_items.quantity) as impact')
+            ->value('impact') ?? 0);
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Builder<ProductReturn>
      */
@@ -210,7 +246,8 @@ class FinancialMetricsService
     ): array {
         $paymentsQuery = SupplierInstallmentPayment::query()
             ->where('paid_at', '>=', $from)
-            ->where('paid_at', '<=', $to);
+            ->where('paid_at', '<=', $to)
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value);
 
         if ($branchId !== null) {
             $paymentsQuery->whereHas('installment.purchaseOrder', fn ($q) => $q->where('branch_id', $branchId));

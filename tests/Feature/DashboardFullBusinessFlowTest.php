@@ -230,7 +230,7 @@ class DashboardFullBusinessFlowTest extends TestCase
             'weekly_customer_refunds' => 200.0,
             'weekly_net_sales' => 400.0,
             'weekly_gross_profit' => 300.0,
-            'weekly_profit' => 100.0,
+            'weekly_profit' => 200.0,
             'total_receivables' => 0.0,
         ]);
 
@@ -243,7 +243,7 @@ class DashboardFullBusinessFlowTest extends TestCase
 
         $this->assertEquals(600.0, $report['totals']['revenue']);
         $this->assertEquals(200.0, $report['totals']['customer_refunds']);
-        $this->assertEquals(100.0, $report['totals']['profit']);
+        $this->assertEquals(200.0, $report['totals']['profit']);
         $this->assertEquals(25000.0, $report['suppliers']['payments_in_period']);
         $this->assertEquals(100000.0, $report['suppliers']['purchases_ordered_in_period']);
         $this->assertEquals(500000.0, $report['capital']['capital_amount']);

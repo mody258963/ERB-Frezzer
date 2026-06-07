@@ -188,6 +188,11 @@ class ApiV1EndpointsSmokeTest extends TestCase
 
         $auth()->getJson("/api/v1/invoices/{$invoiceCreditId}")->assertOk();
         $auth()->getJson("/api/v1/customers/{$customerCreditId}/balance")->assertOk();
+        $auth()->getJson("/api/v1/customers/{$customerCreditId}/payments")->assertOk();
+        $auth()->postJson("/api/v1/customers/{$customerCreditId}/payments", [
+            'payment_method' => 'cash',
+            'amount' => 1,
+        ])->assertCreated();
 
         $transferResp = $auth()->postJson('/api/v1/transfers', [
             'from_branch_id' => $mainBranchId,
@@ -228,6 +233,12 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $auth()->getJson('/api/v1/suppliers')->assertOk();
         $auth()->getJson("/api/v1/suppliers/{$supplierId}")->assertOk();
         $auth()->getJson("/api/v1/suppliers/{$supplierId}/debt")->assertOk();
+        $auth()->putJson("/api/v1/customers/{$customerCreditId}", [
+            'linked_supplier_id' => $supplierId,
+        ])->assertOk();
+        $auth()->getJson("/api/v1/customers/{$customerCreditId}/linked-balance")->assertOk();
+        $auth()->getJson("/api/v1/suppliers/{$supplierId}/linked-balance")->assertOk();
+        $auth()->getJson("/api/v1/customers/{$customerCreditId}/contra-settlements")->assertOk();
 
         $purchaseKeepResp = $auth()->postJson('/api/v1/purchases', [
             'supplier_id' => $supplierId,

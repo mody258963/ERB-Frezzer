@@ -17,6 +17,7 @@ return new class extends Migration
             $table->decimal('subtotal', 12, 2);
             $table->decimal('discount', 12, 2)->default(0);
             $table->decimal('total', 12, 2);
+            $table->decimal('amount_paid', 12, 2)->default(0);
             $table->boolean('is_paid')->default(false);
             $table->timestamp('paid_at')->nullable();
             $table->foreignUuid('settlement_id')->nullable()->constrained('saturday_settlements')->nullOnDelete();

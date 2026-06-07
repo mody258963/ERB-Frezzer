@@ -22,6 +22,7 @@ final class DashboardSummaryTransformer
             'weekly_customer_refunds' => (float) ($row['weekly_customer_refunds'] ?? 0),
             'weekly_net_sales' => (float) ($row['weekly_net_sales'] ?? 0),
             'weekly_gross_profit' => (float) ($row['weekly_gross_profit'] ?? 0),
+            'weekly_customer_refund_profit_impact' => (float) ($row['weekly_customer_refund_profit_impact'] ?? 0),
             'weekly_profit' => (float) ($row['weekly_profit'] ?? 0),
             'weekly_supplier_payments' => (float) ($row['weekly_supplier_payments'] ?? 0),
             'weekly_purchases_ordered' => (float) ($row['weekly_purchases_ordered'] ?? 0),

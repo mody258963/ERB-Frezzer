@@ -15,7 +15,7 @@ class Invoice extends Model
 
     protected $fillable = [
         'invoice_number', 'customer_id', 'branch_id', 'payment_type', 'subtotal', 'discount',
-        'total', 'is_paid', 'paid_at', 'settlement_id', 'created_by', 'return_status',
+        'total', 'amount_paid', 'is_paid', 'paid_at', 'settlement_id', 'created_by', 'return_status',
     ];
 
     protected function casts(): array
@@ -25,6 +25,7 @@ class Invoice extends Model
             'subtotal' => 'decimal:2',
             'discount' => 'decimal:2',
             'total' => 'decimal:2',
+            'amount_paid' => 'decimal:2',
             'is_paid' => 'boolean',
             'paid_at' => 'datetime',
             'return_status' => InvoiceReturnStatus::class,
@@ -54,5 +55,12 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function balanceDue(): string
+    {
+        $balance = bcsub((string) $this->total, (string) $this->amount_paid, 2);
+
+        return bccomp($balance, '0', 2) < 0 ? '0.00' : $balance;
     }
 }

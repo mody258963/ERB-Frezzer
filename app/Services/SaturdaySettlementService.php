@@ -56,6 +56,7 @@ class SaturdaySettlementService
             ]);
 
             foreach ($unpaid as $inv) {
+                $inv->amount_paid = $inv->total;
                 $inv->is_paid = true;
                 $inv->paid_at = now();
                 $inv->settlement_id = $settlement->id;

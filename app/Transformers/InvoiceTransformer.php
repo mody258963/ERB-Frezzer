@@ -31,6 +31,8 @@ final class InvoiceTransformer
             'subtotal' => (float) $invoice->subtotal,
             'discount' => (float) $invoice->discount,
             'total' => (float) $invoice->total,
+            'amount_paid' => (float) $invoice->amount_paid,
+            'balance_due' => (float) $invoice->balanceDue(),
             'is_paid' => $invoice->is_paid,
             'paid_at' => $invoice->paid_at?->toISOString(),
             'return_status' => self::enumValue($invoice->return_status) ?? 'none',
