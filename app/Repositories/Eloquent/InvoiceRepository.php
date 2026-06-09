@@ -33,6 +33,11 @@ class InvoiceRepository implements InvoiceRepositoryInterface
         return Invoice::query()->with(['items.part', 'customer', 'branch', 'creator'])->find($id);
     }
 
+    public function findOrFail(string $id): Invoice
+    {
+        return Invoice::query()->findOrFail($id);
+    }
+
     public function pendingCredit(?User $user): Collection
     {
         $query = Invoice::query()

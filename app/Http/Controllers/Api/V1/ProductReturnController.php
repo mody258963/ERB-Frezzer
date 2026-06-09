@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ReturnReferenceType;
-use App\Enums\ReturnType;
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ProductReturn\ApproveProductReturnRequest;
+use App\Http\Requests\Api\V1\ProductReturn\RejectProductReturnRequest;
+use App\Http\Requests\Api\V1\ProductReturn\StoreProductReturnRequest;
 use App\Http\Resources\ProductReturnResource;
-use App\Models\ProductReturn;
 use App\Repositories\Contracts\ProductReturnRepositoryInterface;
 use App\Services\ReturnQuantityValidator;
 use App\Services\ReturnService;
@@ -16,6 +18,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductReturnController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private ProductReturnRepositoryInterface $returns,
         private ReturnService $returnService,
@@ -36,71 +40,33 @@ class ProductReturnController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreProductReturnRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'return_type' => ['required', 'in:customer_return,supplier_return'],
-            'reference_id' => ['required', 'uuid'],
-            'reference_type' => ['required', 'in:invoice,purchase_order'],
-            'customer_id' => ['nullable', 'uuid'],
-            'supplier_id' => ['nullable', 'uuid'],
-            'branch_id' => ['required', 'uuid'],
-            'reason' => ['nullable', 'string'],
-            'attachment_url' => ['nullable', 'string'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.part_id' => ['required', 'uuid'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.unit_price' => ['required', 'numeric'],
-            'items.*.condition' => ['required', 'in:sellable,defective'],
-        ]);
-
-        $items = [];
-        $totalValue = '0';
-        foreach ($data['items'] as $row) {
-            $lineTotal = bcmul((string) $row['unit_price'], (string) $row['quantity'], 2);
-            $totalValue = bcadd($totalValue, $lineTotal, 2);
-            $items[] = [
-                'part_id' => $row['part_id'],
-                'quantity' => $row['quantity'],
-                'unit_price' => (string) $row['unit_price'],
-                'condition' => $row['condition'],
-                'total' => $lineTotal,
-            ];
-        }
-
-        if ($data['return_type'] === ReturnType::CustomerReturn->value
-            && $data['reference_type'] === ReturnReferenceType::Invoice->value) {
-            $this->returnQuantities->assertCustomerInvoiceReturn($data['reference_id'], $items);
-        }
-
-        if ($data['return_type'] === ReturnType::SupplierReturn->value
-            && $data['reference_type'] === ReturnReferenceType::PurchaseOrder->value) {
-            $this->returnQuantities->assertSupplierPurchaseReturn($data['reference_id'], $items);
-        }
+        $payload = $request->payload($this->returnQuantities);
 
         $ret = $this->returns->create(
             [
                 'return_number' => $this->returns->nextReturnNumber(),
-                'return_type' => $data['return_type'],
-                'reference_id' => $data['reference_id'],
-                'reference_type' => $data['reference_type'],
-                'customer_id' => $data['customer_id'] ?? null,
-                'supplier_id' => $data['supplier_id'] ?? null,
-                'branch_id' => $data['branch_id'],
-                'reason' => $data['reason'] ?? null,
+                'return_type' => $payload['header']['return_type'],
+                'reference_id' => $payload['header']['reference_id'],
+                'reference_type' => $payload['header']['reference_type'],
+                'customer_id' => $payload['header']['customer_id'],
+                'supplier_id' => $payload['header']['supplier_id'],
+                'branch_id' => $payload['header']['branch_id'],
+                'reason' => $payload['header']['reason'],
                 'status' => 'pending',
                 'resolution' => null,
-                'total_value' => $totalValue,
+                'total_value' => $payload['total_value'],
                 'notes' => null,
-                'attachment_url' => $data['attachment_url'] ?? null,
+                'attachment_url' => $payload['header']['attachment_url'],
                 'approved_by' => null,
                 'created_by' => $request->user()->id,
             ],
-            $items
+            $payload['items']
         );
 
-        if ($data['reference_type'] === ReturnReferenceType::Invoice->value) {
-            $this->returnQuantities->syncInvoiceReturnStatus($data['reference_id']);
+        if ($payload['header']['reference_type'] === ReturnReferenceType::Invoice->value) {
+            $this->returnQuantities->syncInvoiceReturnStatus($payload['header']['reference_id']);
         }
 
         return (new ProductReturnResource($ret->load(['items.part', 'customer', 'supplier', 'branch', 'creator'])))
@@ -110,34 +76,26 @@ class ProductReturnController extends Controller
 
     public function show(string $id): ProductReturnResource
     {
-        $r = $this->returns->findWithItems($id);
-        abort_if(! $r, 404);
-
-        return new ProductReturnResource($r);
+        return new ProductReturnResource($this->resolveOrFail($this->returns->findWithItems($id)));
     }
 
-    public function approve(Request $request, string $id): ProductReturnResource
+    public function approve(ApproveProductReturnRequest $request, string $id): ProductReturnResource
     {
-        $data = $request->validate([
-            'resolution' => ['required', 'in:restock,writeoff,replace,refund_cash,credit_note,supplier_credit'],
-        ]);
-
-        $r = ProductReturn::query()->findOrFail($id);
-
         return new ProductReturnResource(
-            $this->returnService->approve($request->user(), $r, $data['resolution'])
+            $this->returnService
+                ->approve($request->user(), $this->returns->findOrFail($id), $request->validated('resolution'))
                 ->load(['items.part', 'customer', 'supplier', 'branch', 'creator', 'approver'])
         );
     }
 
-    public function reject(Request $request, string $id): ProductReturnResource
+    public function reject(RejectProductReturnRequest $request, string $id): ProductReturnResource
     {
-        $data = $request->validate([
-            'reason' => ['required', 'string', 'max:2000'],
-        ]);
-
-        $r = ProductReturn::query()->findOrFail($id);
-
-        return new ProductReturnResource($this->returnService->reject($request->user(), $r, $data['reason']));
+        return new ProductReturnResource(
+            $this->returnService->reject(
+                $request->user(),
+                $this->returns->findOrFail($id),
+                $request->validated('reason')
+            )
+        );
     }
 }

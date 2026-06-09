@@ -12,6 +12,8 @@ interface ProductReturnRepositoryInterface
 
     public function findWithItems(string $id): ?ProductReturn;
 
+    public function findOrFail(string $id): ProductReturn;
+
     public function nextReturnNumber(): string;
 
     public function create(array $data, array $items): ProductReturn;

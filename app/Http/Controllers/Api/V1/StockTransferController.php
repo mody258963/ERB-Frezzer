@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\StockTransfer\CompleteStockTransferRequest;
+use App\Http\Requests\Api\V1\StockTransfer\StoreStockTransferRequest;
 use App\Http\Resources\MessageResource;
 use App\Http\Resources\StockTransferResource;
-use App\Models\StockTransfer;
 use App\Repositories\Contracts\StockTransferRepositoryInterface;
 use App\Services\StockTransferService;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +16,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StockTransferController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private StockTransferRepositoryInterface $transfers,
         private StockTransferService $transferService
@@ -26,16 +30,9 @@ class StockTransferController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreStockTransferRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'from_branch_id' => ['required', 'uuid'],
-            'to_branch_id' => ['required', 'uuid', 'different:from_branch_id'],
-            'notes' => ['nullable', 'string'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.part_id' => ['required', 'uuid'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-        ]);
+        $data = $request->validated();
 
         $transfer = $this->transfers->create(
             [
@@ -53,24 +50,16 @@ class StockTransferController extends Controller
 
     public function show(string $id): StockTransferResource
     {
-        $t = $this->transfers->findWithItems($id);
-        abort_if(! $t, 404);
-
-        return new StockTransferResource($t);
+        return new StockTransferResource($this->resolveOrFail($this->transfers->findWithItems($id)));
     }
 
-    public function complete(Request $request, string $id): StockTransferResource
+    public function complete(CompleteStockTransferRequest $request, string $id): StockTransferResource
     {
-        $options = $request->validate([
-            'valuation' => ['nullable', 'in:cost,sell'],
-            'record_branch_charge' => ['nullable', 'boolean'],
-        ]);
-
-        $t = StockTransfer::query()->findOrFail($id);
+        $options = $request->validated();
 
         return new StockTransferResource($this->transferService->complete(
             $request->user(),
-            $t,
+            $this->transfers->findOrFail($id),
             $options['valuation'] ?? 'cost',
             $options['record_branch_charge'] ?? true,
         ));
@@ -78,8 +67,7 @@ class StockTransferController extends Controller
 
     public function cancel(Request $request, string $id): JsonResponse
     {
-        $t = StockTransfer::query()->findOrFail($id);
-        $this->transferService->cancel($request->user(), $t);
+        $this->transferService->cancel($request->user(), $this->transfers->findOrFail($id));
 
         return (new MessageResource(['message' => 'Cancelled.']))->response();
     }

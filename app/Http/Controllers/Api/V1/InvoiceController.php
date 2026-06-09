@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Invoice\IndexInvoiceRequest;
+use App\Http\Requests\Api\V1\Invoice\StoreInvoiceRequest;
 use App\Http\Resources\InvoiceReceiptResource;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\MessageResource;
-use App\Models\Invoice;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\Services\InvoiceReturnContextService;
 use App\Services\InvoiceService;
@@ -16,25 +18,18 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class InvoiceController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private InvoiceRepositoryInterface $invoices,
         private InvoiceService $invoiceService,
         private InvoiceReturnContextService $invoiceReturnContext,
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexInvoiceRequest $request): AnonymousResourceCollection
     {
-        $filters = [
-            'payment_type' => $request->query('payment_type'),
-            'is_paid' => $request->query('is_paid'),
-            'customer_id' => $request->query('customer_id'),
-            'branch_id' => $request->query('branch_id'),
-            'from' => $request->query('from'),
-            'to' => $request->query('to'),
-        ];
-
         return InvoiceResource::collection(
-            $this->invoices->paginate($request->user(), $filters, (int) $request->query('per_page', 25))
+            $this->invoices->paginate($request->user(), $request->filters(), $request->perPage())
         );
     }
 
@@ -45,20 +40,9 @@ class InvoiceController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreInvoiceRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'customer_id' => ['required', 'uuid'],
-            'branch_id' => ['required', 'uuid'],
-            'payment_type' => ['required', 'in:credit,cash'],
-            'discount' => ['nullable', 'numeric', 'min:0'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.part_id' => ['required', 'uuid'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
-        ]);
-
-        $invoice = $this->invoiceService->create($request->user(), $data);
+        $invoice = $this->invoiceService->create($request->user(), $request->validated());
 
         return (new InvoiceResource($invoice->load(['items.part', 'customer', 'branch', 'creator'])))
             ->response()
@@ -67,27 +51,22 @@ class InvoiceController extends Controller
 
     public function show(string $id): InvoiceResource
     {
-        $inv = $this->invoices->findWithItems($id);
-        abort_if(! $inv, 404);
+        $invoice = $this->resolveOrFail($this->invoices->findWithItems($id));
 
-        return (new InvoiceResource($inv))
-            ->withReturnContext($this->invoiceReturnContext->quantitiesByPart($inv));
+        return (new InvoiceResource($invoice))
+            ->withReturnContext($this->invoiceReturnContext->quantitiesByPart($invoice));
     }
 
     public function receipt(string $id): InvoiceReceiptResource
     {
-        $inv = $this->invoices->findWithItems($id);
-        abort_if(! $inv, 404);
+        $invoice = $this->resolveOrFail($this->invoices->findWithItems($id));
 
-        return new InvoiceReceiptResource(
-            $this->invoiceReturnContext->receiptPayload($inv),
-        );
+        return new InvoiceReceiptResource($this->invoiceReturnContext->receiptPayload($invoice));
     }
 
     public function cancel(Request $request, string $id): JsonResponse
     {
-        $inv = Invoice::query()->findOrFail($id);
-        $this->invoiceService->cancel($request->user(), $inv);
+        $this->invoiceService->cancel($request->user(), $this->invoices->findOrFail($id));
 
         return (new MessageResource(['message' => 'Invoice cancelled.']))->response();
     }

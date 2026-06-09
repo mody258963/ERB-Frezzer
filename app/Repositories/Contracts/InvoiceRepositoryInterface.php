@@ -13,6 +13,8 @@ interface InvoiceRepositoryInterface
 
     public function findWithItems(string $id): ?Invoice;
 
+    public function findOrFail(string $id): Invoice;
+
     public function pendingCredit(?User $user): Collection;
 
     public function nextInvoiceNumber(): string;

@@ -13,6 +13,8 @@ interface SupplierInstallmentRepositoryInterface
 
     public function find(string $id): ?SupplierInstallment;
 
+    public function findOrFail(string $id): SupplierInstallment;
+
     public function overdue(): Collection;
 
     public function save(SupplierInstallment $installment): void;

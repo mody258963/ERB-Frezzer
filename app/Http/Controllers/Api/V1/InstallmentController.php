@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Installment\PayInstallmentRequest;
 use App\Http\Resources\SupplierInstallmentResource;
-use App\Models\SupplierInstallment;
 use App\Repositories\Contracts\SupplierInstallmentRepositoryInterface;
 use App\Services\InstallmentPaymentService;
 use Illuminate\Http\Request;
@@ -36,18 +36,12 @@ class InstallmentController extends Controller
         return SupplierInstallmentResource::collection($this->installments->overdue());
     }
 
-    public function pay(Request $request, string $id): SupplierInstallmentResource
+    public function pay(PayInstallmentRequest $request, string $id): SupplierInstallmentResource
     {
-        $data = $request->validate([
-            'payment_method' => ['required', 'in:cash,bank_transfer,check'],
-            'amount' => ['nullable', 'numeric', 'min:0.01'],
-            'notes' => ['nullable', 'string', 'max:2000'],
-        ]);
-
-        $inst = SupplierInstallment::query()->findOrFail($id);
-
         return new SupplierInstallmentResource(
-            $this->paymentService->pay($request->user(), $inst, $data)->load(['supplier', 'purchaseOrder', 'paidByUser'])
+            $this->paymentService
+                ->pay($request->user(), $this->installments->findOrFail($id), $request->validated())
+                ->load(['supplier', 'purchaseOrder', 'paidByUser'])
         );
     }
 }

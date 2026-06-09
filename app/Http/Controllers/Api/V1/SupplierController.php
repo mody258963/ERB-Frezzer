@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Supplier\StoreSupplierRequest;
+use App\Http\Requests\Api\V1\Supplier\UpdateSupplierRequest;
 use App\Http\Resources\LinkedPartyBalanceResource;
 use App\Http\Resources\SupplierDebtResource;
 use App\Http\Resources\SupplierResource;
-use App\Models\PurchaseOrder;
-use App\Models\SupplierInstallment;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use App\Services\ContraSettlementService;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SupplierController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private SupplierRepositoryInterface $suppliers,
         private ContraSettlementService $contraSettlements,
@@ -28,78 +31,43 @@ class SupplierController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreSupplierRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string'],
-            'contact_person' => ['nullable', 'string'],
-            'phone' => ['nullable', 'string'],
-            'address' => ['nullable', 'string'],
-        ]);
-
-        return (new SupplierResource($this->suppliers->create($data)))
+        return (new SupplierResource($this->suppliers->create($request->validated())))
             ->response()
             ->setStatusCode(201);
     }
 
     public function show(string $id): SupplierResource
     {
-        $s = $this->suppliers->find($id);
-        abort_if(! $s, 404);
+        $supplier = $this->resolveOrFail($this->suppliers->find($id));
 
-        return new SupplierResource($s->load('linkedCustomer'));
+        return new SupplierResource($supplier->load('linkedCustomer'));
     }
 
-    public function update(Request $request, string $id): SupplierResource
+    public function update(UpdateSupplierRequest $request, string $id): SupplierResource
     {
-        $s = $this->suppliers->find($id);
-        abort_if(! $s, 404);
+        $supplier = $this->resolveOrFail($this->suppliers->find($id));
 
-        $data = $request->validate([
-            'name' => ['sometimes', 'string'],
-            'contact_person' => ['nullable', 'string'],
-            'phone' => ['nullable', 'string'],
-            'address' => ['nullable', 'string'],
-        ]);
-
-        return new SupplierResource($this->suppliers->update($s, $data));
+        return new SupplierResource($this->suppliers->update($supplier, $request->validated()));
     }
 
     public function destroy(string $id): JsonResponse
     {
-        $s = $this->suppliers->find($id);
-        abort_if(! $s, 404);
-        $this->suppliers->update($s, ['is_active' => false]);
+        $supplier = $this->resolveOrFail($this->suppliers->find($id));
+        $this->suppliers->update($supplier, ['is_active' => false]);
 
         return response()->json(null, 204);
     }
 
     public function debt(string $id): SupplierDebtResource
     {
-        $s = $this->suppliers->find($id);
-        abort_if(! $s, 404);
-
-        $pos = PurchaseOrder::query()
-            ->where('supplier_id', $id)
-            ->with(['items.part', 'installments', 'branch', 'supplier', 'creator'])
-            ->get();
-
-        $installments = SupplierInstallment::query()
-            ->where('supplier_id', $id)
-            ->orderBy('due_date')
-            ->get();
-
-        return new SupplierDebtResource([
-            'supplier' => $s,
-            'purchase_orders' => $pos,
-            'installments' => $installments,
-        ]);
+        return new SupplierDebtResource($this->suppliers->debtSnapshot($id));
     }
 
     public function linkedBalance(string $id): LinkedPartyBalanceResource
     {
-        $supplier = $this->suppliers->find($id);
-        abort_if(! $supplier, 404);
+        $supplier = $this->resolveOrFail($this->suppliers->find($id));
 
         return new LinkedPartyBalanceResource(
             $this->contraSettlements->netBalanceForSupplier($supplier->load('linkedCustomer'))

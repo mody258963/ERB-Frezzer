@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\PartCategory\StorePartCategoryRequest;
+use App\Http\Requests\Api\V1\PartCategory\UpdatePartCategoryRequest;
 use App\Http\Resources\PartCategoryResource;
 use App\Models\PartCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
 
 class PartCategoryController extends Controller
 {
@@ -23,14 +24,9 @@ class PartCategoryController extends Controller
         return PartCategoryResource::collection($query->get());
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StorePartCategoryRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'key' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/', 'unique:part_categories,key'],
-            'name' => ['required', 'string', 'max:255'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'is_active' => ['boolean'],
-        ]);
+        $data = $request->validated();
 
         $category = PartCategory::query()->create([
             'key' => $data['key'],
@@ -44,18 +40,10 @@ class PartCategoryController extends Controller
             ->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id): PartCategoryResource
+    public function update(UpdatePartCategoryRequest $request, string $id): PartCategoryResource
     {
         $category = PartCategory::query()->findOrFail($id);
-
-        $data = $request->validate([
-            'key' => ['sometimes', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/', Rule::unique('part_categories', 'key')->ignore($id)],
-            'name' => ['sometimes', 'string', 'max:255'],
-            'sort_order' => ['sometimes', 'integer', 'min:0'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $category->update($data);
+        $category->update($request->validated());
 
         return new PartCategoryResource($category->fresh());
     }

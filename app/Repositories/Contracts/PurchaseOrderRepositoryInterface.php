@@ -12,6 +12,8 @@ interface PurchaseOrderRepositoryInterface
 
     public function findWithRelations(string $id): ?PurchaseOrder;
 
+    public function findOrFail(string $id): PurchaseOrder;
+
     public function nextPoNumber(): string;
 
     public function create(array $po, array $items): PurchaseOrder;

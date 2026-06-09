@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\PartUnit;
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Part\PartAnalysisRequest;
+use App\Http\Requests\Api\V1\Part\StorePartImageRequest;
+use App\Http\Requests\Api\V1\Part\StorePartRequest;
+use App\Http\Requests\Api\V1\Part\UpdatePartRequest;
 use App\Http\Resources\PartAnalysisResource;
 use App\Http\Resources\PartResource;
 use App\Repositories\Contracts\PartRepositoryInterface;
@@ -13,10 +17,11 @@ use App\Support\PartLookupResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
 
 class PartController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private PartRepositoryInterface $parts,
         private PartAnalysisService $partAnalysis,
@@ -39,26 +44,17 @@ class PartController extends Controller
 
     public function show(string $id): PartResource
     {
-        $p = $this->parts->find($id);
-        abort_if(! $p, 404);
-
-        return new PartResource($p);
+        return new PartResource($this->resolveOrFail($this->parts->find($id)));
     }
 
-    public function analysis(Request $request, string $id): PartAnalysisResource
+    public function analysis(PartAnalysisRequest $request, string $id): PartAnalysisResource
     {
-        $p = $this->parts->find($id);
-        abort_if(! $p, 404);
-
-        $filters = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
-            'branch_id' => ['nullable', 'uuid'],
-        ]);
+        $part = $this->resolveOrFail($this->parts->find($id));
+        $filters = $request->validated();
 
         return new PartAnalysisResource(
             $this->partAnalysis->analyze(
-                $p,
+                $part,
                 $request->user(),
                 $filters['from'] ?? null,
                 $filters['to'] ?? null,
@@ -67,19 +63,9 @@ class PartController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StorePartRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:64', 'unique:parts,code'],
-            'name' => ['required', 'string', 'max:255'],
-            'category_id' => ['nullable', 'uuid', 'exists:part_categories,id', 'required_without:category_key'],
-            'category_key' => ['nullable', 'string', 'max:64', 'required_without:category_id'],
-            'unit' => ['required', Rule::enum(PartUnit::class)],
-            'sell_price' => ['required', 'numeric', 'min:0'],
-            'cost_price' => ['required', 'numeric', 'min:0'],
-            'min_stock' => ['required', 'integer', 'min:0'],
-            'is_active' => ['boolean'],
-        ]);
+        $data = $request->validated();
 
         $part = $this->parts->create([
             'code' => $data['code'],
@@ -97,60 +83,41 @@ class PartController extends Controller
             ->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id): PartResource
+    public function update(UpdatePartRequest $request, string $id): PartResource
     {
-        $p = $this->parts->find($id);
-        abort_if(! $p, 404);
-
-        $data = $request->validate([
-            'code' => ['sometimes', 'string', 'max:64', 'unique:parts,code,'.$id],
-            'name' => ['sometimes', 'string'],
-            'category_id' => ['sometimes', 'uuid', 'exists:part_categories,id'],
-            'category_key' => ['sometimes', 'string', 'max:64'],
-            'unit' => ['sometimes', Rule::enum(PartUnit::class)],
-            'sell_price' => ['sometimes', 'numeric'],
-            'cost_price' => ['sometimes', 'numeric'],
-            'min_stock' => ['sometimes', 'integer'],
-            'is_active' => ['boolean'],
-        ]);
+        $part = $this->resolveOrFail($this->parts->find($id));
+        $data = $request->validated();
 
         if (isset($data['category_id']) || isset($data['category_key'])) {
             $data['category_id'] = PartLookupResolver::resolveCategoryId([
-                'category_id' => $data['category_id'] ?? $p->category_id,
+                'category_id' => $data['category_id'] ?? $part->category_id,
                 'category_key' => $data['category_key'] ?? null,
             ]);
             unset($data['category_key']);
         }
 
-        return new PartResource($this->parts->update($p, $data)->load(['category']));
+        return new PartResource($this->parts->update($part, $data)->load(['category']));
     }
 
     public function destroy(string $id): JsonResponse
     {
-        $p = $this->parts->find($id);
-        abort_if(! $p, 404);
-        $this->parts->update($p, ['is_active' => false]);
+        $part = $this->resolveOrFail($this->parts->find($id));
+        $this->parts->update($part, ['is_active' => false]);
 
         return response()->json(null, 204);
     }
 
-    public function storeImage(Request $request, string $id): PartResource
+    public function storeImage(StorePartImageRequest $request, string $id): PartResource
     {
-        $p = $this->parts->find($id);
-        abort_if(! $p, 404);
+        $part = $this->resolveOrFail($this->parts->find($id));
 
-        $data = $request->validate([
-            'image' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
-        ]);
-
-        return new PartResource($this->partImages->store($p, $data['image']));
+        return new PartResource($this->partImages->store($part, $request->validated('image')));
     }
 
     public function destroyImage(string $id): PartResource
     {
-        $p = $this->parts->find($id);
-        abort_if(! $p, 404);
+        $part = $this->resolveOrFail($this->parts->find($id));
 
-        return new PartResource($this->partImages->delete($p));
+        return new PartResource($this->partImages->delete($part));
     }
 }

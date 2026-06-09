@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Capital\OwnerCashOutRequest;
+use App\Http\Requests\Api\V1\Capital\UpdateCapitalRequest;
 use App\Http\Resources\CapitalAdjustmentResource;
 use App\Http\Resources\CapitalSettingsResource;
 use App\Http\Resources\OwnerCashOutResource;
@@ -21,20 +23,16 @@ class CapitalSettingsController extends Controller
         private DashboardCacheService $dashboardCache,
     ) {}
 
-    public function show(Request $request): CapitalSettingsResource
+    public function show(): CapitalSettingsResource
     {
         return new CapitalSettingsResource($this->capital->showWithSnapshot());
     }
 
-    public function update(Request $request): CapitalSettingsResource
+    public function update(UpdateCapitalRequest $request): CapitalSettingsResource
     {
-        $data = $request->validate([
-            'capital_amount' => ['required', 'numeric', 'min:0'],
-            'reason' => ['nullable', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-        ]);
-
+        $data = $request->validated();
         $before = $this->capital->showWithSnapshot();
+
         $setting = $this->capital->update(
             $request->user(),
             (float) $data['capital_amount'],
@@ -64,15 +62,11 @@ class CapitalSettingsController extends Controller
         );
     }
 
-    public function cashOut(Request $request): OwnerCashOutResultResource
+    public function cashOut(OwnerCashOutRequest $request): OwnerCashOutResultResource
     {
-        $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'reason' => ['nullable', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-        ]);
-
+        $data = $request->validated();
         $before = $this->capital->showWithSnapshot();
+
         $result = $this->capital->cashOut(
             $request->user(),
             (float) $data['amount'],

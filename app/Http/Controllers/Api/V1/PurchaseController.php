@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Purchase\StorePurchaseRequest;
 use App\Http\Resources\MessageResource;
 use App\Http\Resources\PurchaseOrderResource;
-use App\Models\PurchaseOrder;
 use App\Repositories\Contracts\PurchaseOrderRepositoryInterface;
 use App\Services\PurchaseOrderService;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +15,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PurchaseController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private PurchaseOrderRepositoryInterface $purchases,
         private PurchaseOrderService $purchaseOrderService
@@ -33,22 +36,9 @@ class PurchaseController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StorePurchaseRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'supplier_id' => ['required', 'uuid'],
-            'branch_id' => ['required', 'uuid'],
-            'description' => ['nullable', 'string'],
-            'payment_type' => ['required', 'in:immediate,installments'],
-            'installment_count' => ['nullable', 'integer', 'min:1'],
-            'installment_start_date' => ['nullable', 'date'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.part_id' => ['required', 'uuid'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
-        ]);
-
-        $po = $this->purchaseOrderService->create($request->user(), $data);
+        $po = $this->purchaseOrderService->create($request->user(), $request->validated());
 
         return (new PurchaseOrderResource($po->load(['items.part', 'installments', 'supplier', 'branch', 'creator'])))
             ->response()
@@ -57,25 +47,24 @@ class PurchaseController extends Controller
 
     public function show(string $id): PurchaseOrderResource
     {
-        $po = $this->purchases->findWithRelations($id);
-        abort_if(! $po, 404);
-
-        return new PurchaseOrderResource($po);
+        return new PurchaseOrderResource($this->resolveOrFail($this->purchases->findWithRelations($id)));
     }
 
     public function receive(Request $request, string $id): PurchaseOrderResource
     {
-        $po = PurchaseOrder::query()->findOrFail($id);
+        $po = $this->purchaseOrderService->receive(
+            $request->user(),
+            $this->purchases->findOrFail($id)
+        );
 
         return new PurchaseOrderResource(
-            $this->purchaseOrderService->receive($request->user(), $po)->load(['items.part', 'installments', 'supplier', 'branch', 'creator'])
+            $po->load(['items.part', 'installments', 'supplier', 'branch', 'creator'])
         );
     }
 
     public function cancel(Request $request, string $id): JsonResponse
     {
-        $po = PurchaseOrder::query()->findOrFail($id);
-        $this->purchaseOrderService->cancel($request->user(), $po);
+        $this->purchaseOrderService->cancel($request->user(), $this->purchases->findOrFail($id));
 
         return (new MessageResource(['message' => 'Cancelled.']))->response();
     }

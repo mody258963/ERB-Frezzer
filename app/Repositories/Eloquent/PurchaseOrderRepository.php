@@ -32,6 +32,11 @@ class PurchaseOrderRepository implements PurchaseOrderRepositoryInterface
             ->find($id);
     }
 
+    public function findOrFail(string $id): PurchaseOrder
+    {
+        return PurchaseOrder::query()->findOrFail($id);
+    }
+
     public function nextPoNumber(): string
     {
         $max = PurchaseOrder::query()->max('po_number');

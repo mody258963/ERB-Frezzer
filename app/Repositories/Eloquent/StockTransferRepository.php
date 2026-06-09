@@ -30,6 +30,11 @@ class StockTransferRepository implements StockTransferRepositoryInterface
             ->find($id);
     }
 
+    public function findOrFail(string $id): StockTransfer
+    {
+        return StockTransfer::query()->findOrFail($id);
+    }
+
     public function create(array $data, array $items): StockTransfer
     {
         $t = StockTransfer::query()->create($data);

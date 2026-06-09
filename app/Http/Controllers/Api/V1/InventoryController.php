@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Inventory\AdjustStockRequest;
 use App\Http\Resources\LowStockAlertResource;
 use App\Http\Resources\MessageResource;
 use App\Http\Resources\StockResource;
@@ -45,16 +46,9 @@ class InventoryController extends Controller
         return StockResource::collection($query->get());
     }
 
-    public function adjust(Request $request): JsonResponse
+    public function adjust(AdjustStockRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'part_id' => ['required', 'uuid'],
-            'branch_id' => ['required', 'uuid'],
-            'quantity_delta' => ['required', 'integer', 'not_in:0'],
-            'reason' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $this->inventoryService->adjust($request->user(), $data);
+        $this->inventoryService->adjust($request->user(), $request->validated());
 
         return (new MessageResource(['message' => 'Stock adjusted.']))->response();
     }

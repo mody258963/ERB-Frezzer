@@ -12,6 +12,8 @@ interface StockTransferRepositoryInterface
 
     public function findWithItems(string $id): ?StockTransfer;
 
+    public function findOrFail(string $id): StockTransfer;
+
     public function create(array $data, array $items): StockTransfer;
 
     public function save(StockTransfer $transfer): void;

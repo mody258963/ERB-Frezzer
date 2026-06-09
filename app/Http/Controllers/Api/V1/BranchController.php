@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Branch\StoreBranchRequest;
+use App\Http\Requests\Api\V1\Branch\UpdateBranchRequest;
 use App\Http\Resources\BranchResource;
 use App\Repositories\Contracts\BranchRepositoryInterface;
 use Illuminate\Http\JsonResponse;
@@ -11,15 +14,17 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class BranchController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private BranchRepositoryInterface $branches
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $perPage = (int) $request->query('per_page', 25);
-
-        return BranchResource::collection($this->branches->paginate($request->user(), $perPage));
+        return BranchResource::collection(
+            $this->branches->paginate($request->user(), (int) $request->query('per_page', 25))
+        );
     }
 
     public function active(Request $request): AnonymousResourceCollection
@@ -29,46 +34,26 @@ class BranchController extends Controller
 
     public function show(string $id): BranchResource
     {
-        $branch = $this->branches->find($id);
-        abort_if(! $branch, 404);
-
-        return new BranchResource($branch);
+        return new BranchResource($this->resolveOrFail($this->branches->find($id)));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreBranchRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'address' => ['nullable', 'string'],
-            'phone' => ['nullable', 'string', 'max:64'],
-            'is_active' => ['boolean'],
-        ]);
-
-        return (new BranchResource($this->branches->create($data)))
+        return (new BranchResource($this->branches->create($request->validated())))
             ->response()
             ->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id): BranchResource
+    public function update(UpdateBranchRequest $request, string $id): BranchResource
     {
-        $branch = $this->branches->find($id);
-        abort_if(! $branch, 404);
+        $branch = $this->resolveOrFail($this->branches->find($id));
 
-        $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'address' => ['nullable', 'string'],
-            'phone' => ['nullable', 'string', 'max:64'],
-            'is_active' => ['boolean'],
-        ]);
-
-        return new BranchResource($this->branches->update($branch, $data));
+        return new BranchResource($this->branches->update($branch, $request->validated()));
     }
 
     public function destroy(string $id): JsonResponse
     {
-        $branch = $this->branches->find($id);
-        abort_if(! $branch, 404);
-
+        $branch = $this->resolveOrFail($this->branches->find($id));
         $branch->update(['is_active' => false]);
 
         return response()->json(null, 204);

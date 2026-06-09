@@ -2,7 +2,9 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use App\Models\SupplierInstallment;
 use App\Models\User;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -29,5 +31,22 @@ class SupplierRepository implements SupplierRepositoryInterface
         $supplier->update($data);
 
         return $supplier->fresh();
+    }
+
+    public function debtSnapshot(string $supplierId): array
+    {
+        $supplier = $this->find($supplierId) ?? abort(404);
+
+        return [
+            'supplier' => $supplier,
+            'purchase_orders' => PurchaseOrder::query()
+                ->where('supplier_id', $supplierId)
+                ->with(['items.part', 'installments', 'branch', 'supplier', 'creator'])
+                ->get(),
+            'installments' => SupplierInstallment::query()
+                ->where('supplier_id', $supplierId)
+                ->orderBy('due_date')
+                ->get(),
+        ];
     }
 }

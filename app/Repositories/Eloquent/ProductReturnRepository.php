@@ -32,6 +32,11 @@ class ProductReturnRepository implements ProductReturnRepositoryInterface
             ->find($id);
     }
 
+    public function findOrFail(string $id): ProductReturn
+    {
+        return ProductReturn::query()->findOrFail($id);
+    }
+
     public function nextReturnNumber(): string
     {
         $max = ProductReturn::query()->max('return_number');

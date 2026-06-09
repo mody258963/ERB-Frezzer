@@ -29,6 +29,11 @@ class SupplierInstallmentRepository implements SupplierInstallmentRepositoryInte
             ->find($id);
     }
 
+    public function findOrFail(string $id): SupplierInstallment
+    {
+        return SupplierInstallment::query()->findOrFail($id);
+    }
+
     public function overdue(): Collection
     {
         return SupplierInstallment::query()

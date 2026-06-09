@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Customer\CollectCustomerPaymentRequest;
+use App\Http\Requests\Api\V1\Customer\IndexCustomerRequest;
+use App\Http\Requests\Api\V1\Customer\OffsetSupplierRequest;
+use App\Http\Requests\Api\V1\Customer\StoreCustomerRequest;
+use App\Http\Requests\Api\V1\Customer\UpdateCustomerRequest;
 use App\Http\Resources\ContraSettlementResource;
 use App\Http\Resources\CustomerBalanceResource;
 use App\Http\Resources\CustomerPaymentResource;
 use App\Http\Resources\CustomerResource;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\LinkedPartyBalanceResource;
-use App\Models\Customer;
-use App\Models\Invoice;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Services\ContraSettlementService;
 use App\Services\CustomerPaymentService;
@@ -20,130 +24,79 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CustomerController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private CustomerRepositoryInterface $customers,
         private CustomerPaymentService $customerPayments,
         private ContraSettlementService $contraSettlements,
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexCustomerRequest $request): AnonymousResourceCollection
     {
-        $filters = [
-            'type' => $request->query('type'),
-            'search' => $request->query('search'),
-        ];
-
         return CustomerResource::collection(
-            $this->customers->paginate($request->user(), $filters, (int) $request->query('per_page', 25))
+            $this->customers->paginate($request->user(), $request->filters(), $request->perPage())
         );
     }
 
     public function show(string $id): CustomerResource
     {
-        $c = $this->customers->find($id);
-        abort_if(! $c, 404);
+        $customer = $this->resolveOrFail($this->customers->find($id));
 
-        return new CustomerResource($c->load('linkedSupplier'));
+        return new CustomerResource($customer->load('linkedSupplier'));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreCustomerRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string'],
-            'type' => ['required', 'in:credit,cash'],
-            'phone' => ['nullable', 'string'],
-            'address' => ['nullable', 'string'],
-            'credit_limit' => ['nullable', 'numeric', 'min:0'],
-            'linked_supplier_id' => ['nullable', 'uuid', 'exists:suppliers,id'],
-        ]);
-
-        if (($data['type'] ?? '') === 'credit' && ! isset($data['credit_limit'])) {
-            $data['credit_limit'] = 0;
-        }
-
-        if ($data['type'] === 'cash') {
-            $data['credit_limit'] = 0;
-            $data['outstanding_balance'] = 0;
-        }
-
-        return (new CustomerResource($this->customers->create($data)))
+        return (new CustomerResource($this->customers->create($request->validated())))
             ->response()
             ->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id): CustomerResource
+    public function update(UpdateCustomerRequest $request, string $id): CustomerResource
     {
-        $c = $this->customers->find($id);
-        abort_if(! $c, 404);
+        $customer = $this->resolveOrFail($this->customers->find($id));
 
-        $data = $request->validate([
-            'name' => ['sometimes', 'string'],
-            'type' => ['sometimes', 'in:credit,cash'],
-            'phone' => ['nullable', 'string'],
-            'address' => ['nullable', 'string'],
-            'credit_limit' => ['sometimes', 'numeric'],
-            'linked_supplier_id' => ['nullable', 'uuid', 'exists:suppliers,id'],
-        ]);
-
-        return new CustomerResource($this->customers->update($c, $data)->load('linkedSupplier'));
+        return new CustomerResource($this->customers->update($customer, $request->validated())->load('linkedSupplier'));
     }
 
     public function destroy(string $id): JsonResponse
     {
-        $c = $this->customers->find($id);
-        abort_if(! $c, 404);
-        $this->customers->update($c, ['is_active' => false]);
+        $customer = $this->resolveOrFail($this->customers->find($id));
+        $this->customers->update($customer, ['is_active' => false]);
 
         return response()->json(null, 204);
     }
 
     public function invoices(string $id): AnonymousResourceCollection
     {
-        $c = $this->customers->find($id);
-        abort_if(! $c, 404);
+        $this->resolveOrFail($this->customers->find($id));
 
-        return InvoiceResource::collection(
-            Invoice::query()->where('customer_id', $id)->with(['branch', 'items.part'])->latest()->paginate(50)
-        );
+        return InvoiceResource::collection($this->customers->paginatedInvoices($id));
     }
 
     public function balance(string $id): CustomerBalanceResource
     {
-        $c = $this->customers->find($id);
-        abort_if(! $c, 404);
-
-        $unpaid = Invoice::query()
-            ->where('customer_id', $id)
-            ->where('payment_type', 'credit')
-            ->where('is_paid', false)
-            ->with(['branch', 'items.part'])
-            ->get();
+        $customer = $this->resolveOrFail($this->customers->find($id));
 
         return new CustomerBalanceResource([
-            'outstanding_balance' => (float) $c->outstanding_balance,
-            'unpaid_invoices' => $unpaid,
+            'outstanding_balance' => (float) $customer->outstanding_balance,
+            'unpaid_invoices' => $this->customers->unpaidCreditInvoices($id),
         ]);
     }
 
-    public function collectPayment(Request $request, string $id): CustomerPaymentResource
+    public function collectPayment(CollectCustomerPaymentRequest $request, string $id): CustomerPaymentResource
     {
-        $customer = Customer::query()->findOrFail($id);
-
-        $data = $request->validate([
-            'payment_method' => ['required', 'in:cash,bank_transfer,check'],
-            'amount' => ['nullable', 'numeric', 'min:0.01'],
-            'notes' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $customer = $this->customers->findOrFail($id);
 
         return new CustomerPaymentResource(
-            $this->customerPayments->collect($request->user(), $customer, $data)
+            $this->customerPayments->collect($request->user(), $customer, $request->validated())
         );
     }
 
     public function payments(Request $request, string $id): AnonymousResourceCollection
     {
-        $c = $this->customers->find($id);
-        abort_if(! $c, 404);
+        $this->resolveOrFail($this->customers->find($id));
 
         return CustomerPaymentResource::collection(
             $this->customerPayments->history($id, (int) $request->query('per_page', 25))
@@ -152,30 +105,23 @@ class CustomerController extends Controller
 
     public function linkedBalance(string $id): LinkedPartyBalanceResource
     {
-        $customer = Customer::query()->with('linkedSupplier')->findOrFail($id);
+        $customer = $this->customers->findOrFail($id)->load('linkedSupplier');
 
-        return new LinkedPartyBalanceResource(
-            $this->contraSettlements->netBalance($customer)
-        );
+        return new LinkedPartyBalanceResource($this->contraSettlements->netBalance($customer));
     }
 
-    public function offsetSupplier(Request $request, string $id): JsonResponse
+    public function offsetSupplier(OffsetSupplierRequest $request, string $id): JsonResponse
     {
-        $customer = Customer::query()->findOrFail($id);
-
-        $data = $request->validate([
-            'amount' => ['nullable', 'numeric', 'min:0.01'],
-            'notes' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $customer = $this->customers->findOrFail($id);
 
         return (new ContraSettlementResource(
-            $this->contraSettlements->offset($request->user(), $customer, $data)
+            $this->contraSettlements->offset($request->user(), $customer, $request->validated())
         ))->response()->setStatusCode(201);
     }
 
     public function contraSettlements(Request $request, string $id): AnonymousResourceCollection
     {
-        Customer::query()->findOrFail($id);
+        $this->customers->findOrFail($id);
 
         return ContraSettlementResource::collection(
             $this->contraSettlements->history($id, (int) $request->query('per_page', 25))

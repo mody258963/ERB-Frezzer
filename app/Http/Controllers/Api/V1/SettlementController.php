@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Settlement\StoreSettlementRequest;
 use App\Http\Resources\SaturdaySettlementResource;
 use App\Http\Resources\SettlementUpcomingRowResource;
 use App\Repositories\Contracts\SaturdaySettlementRepositoryInterface;
@@ -13,6 +15,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SettlementController extends Controller
 {
+    use ResolvesRepositoryModels;
+
     public function __construct(
         private SaturdaySettlementRepositoryInterface $settlements,
         private SaturdaySettlementService $settlementService
@@ -25,31 +29,23 @@ class SettlementController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreSettlementRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'customer_id' => ['required', 'uuid'],
-            'settlement_date' => ['required', 'date'],
-            'payment_method' => ['required', 'in:cash,bank_transfer,check'],
-            'notes' => ['nullable', 'string'],
-        ]);
+        $settlement = $this->settlementService->create($request->user(), $request->validated());
 
-        $s = $this->settlementService->create($request->user(), $data);
-
-        return (new SaturdaySettlementResource($this->settlements->findWithInvoices($s->id)))
+        return (new SaturdaySettlementResource($this->settlements->findWithInvoices($settlement->id)))
             ->response()
             ->setStatusCode(201);
     }
 
     public function show(string $id): SaturdaySettlementResource
     {
-        $s = $this->settlements->findWithInvoices($id);
-        abort_if(! $s, 404);
-
-        return new SaturdaySettlementResource($s);
+        return new SaturdaySettlementResource(
+            $this->resolveOrFail($this->settlements->findWithInvoices($id))
+        );
     }
 
-    public function upcoming(Request $request): AnonymousResourceCollection
+    public function upcoming(): AnonymousResourceCollection
     {
         return SettlementUpcomingRowResource::collection($this->settlements->upcomingTotals());
     }

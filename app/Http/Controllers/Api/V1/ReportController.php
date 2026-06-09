@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Report\FinancialReportRequest;
+use App\Http\Requests\Api\V1\Report\PartsSalesChartRequest;
 use App\Http\Resources\CustomerAgingReportRowResource;
+use App\Http\Resources\FinancialReportResource;
 use App\Http\Resources\InventoryValuationRowResource;
 use App\Http\Resources\InvoiceResource;
+use App\Http\Resources\PartSalesChartResource;
 use App\Http\Resources\ReturnsSummaryResource;
 use App\Http\Resources\SupplierDebtAgingRowResource;
-use App\Http\Resources\FinancialReportResource;
-use App\Http\Resources\PartSalesChartResource;
-use App\Support\BranchVisibility;
 use App\Services\PartSalesChartService;
 use App\Services\ReportQueryService;
+use App\Support\BranchVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -36,13 +38,9 @@ class ReportController extends Controller
         return InvoiceResource::collection(collect($rows));
     }
 
-    public function financial(Request $request): FinancialReportResource
+    public function financial(FinancialReportRequest $request): FinancialReportResource
     {
-        $data = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
-            'branch_id' => ['nullable', 'uuid'],
-        ]);
+        $data = $request->validated();
 
         return new FinancialReportResource(
             $this->reports->financial(
@@ -54,17 +52,17 @@ class ReportController extends Controller
         );
     }
 
-    public function inventory(Request $request): AnonymousResourceCollection
+    public function inventory(): AnonymousResourceCollection
     {
         return InventoryValuationRowResource::collection(collect($this->reports->inventoryValuation()));
     }
 
-    public function customers(Request $request): AnonymousResourceCollection
+    public function customers(): AnonymousResourceCollection
     {
         return CustomerAgingReportRowResource::collection(collect($this->reports->customerAging()));
     }
 
-    public function suppliers(Request $request): AnonymousResourceCollection
+    public function suppliers(): AnonymousResourceCollection
     {
         return SupplierDebtAgingRowResource::collection(collect($this->reports->supplierDebtAging()));
     }
@@ -76,15 +74,9 @@ class ReportController extends Controller
         );
     }
 
-    public function partsSalesChart(Request $request): PartSalesChartResource
+    public function partsSalesChart(PartsSalesChartRequest $request): PartSalesChartResource
     {
-        $filters = $request->validate([
-            'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
-            'branch_id' => ['nullable', 'uuid'],
-            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
-            'rank_by' => ['nullable', 'in:units,revenue'],
-        ]);
-
+        $filters = $request->validated();
         $branchId = BranchVisibility::resolveBranchId(
             $request->user(),
             $filters['branch_id'] ?? null,
