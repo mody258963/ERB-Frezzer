@@ -7,11 +7,16 @@ use App\Models\User;
 use App\Repositories\Contracts\StockTransferRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class StockTransferRepository implements StockTransferRepositoryInterface
+class StockTransferRepository extends BaseRepository implements StockTransferRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return StockTransfer::class;
+    }
+
     public function paginate(?User $user, int $perPage = 25): LengthAwarePaginator
     {
-        $query = StockTransfer::query()->with(['fromBranch', 'toBranch', 'creator']);
+        $query = $this->newQuery()->with(['fromBranch', 'toBranch', 'creator']);
 
         if ($user?->branch_id) {
             $query->where(function ($q) use ($user) {
@@ -25,28 +30,23 @@ class StockTransferRepository implements StockTransferRepositoryInterface
 
     public function findWithItems(string $id): ?StockTransfer
     {
-        return StockTransfer::query()
-            ->with(['items.part', 'fromBranch', 'toBranch', 'creator'])
-            ->find($id);
+        return $this->findByIdWith($id, ['items.part', 'fromBranch', 'toBranch', 'creator']);
     }
 
     public function findOrFail(string $id): StockTransfer
     {
-        return StockTransfer::query()->findOrFail($id);
+        /** @var StockTransfer */
+        return $this->findByIdOrFail($id);
     }
 
     public function create(array $data, array $items): StockTransfer
     {
-        $t = StockTransfer::query()->create($data);
-        foreach ($items as $item) {
-            $t->items()->create($item);
-        }
-
-        return $t->load('items');
+        /** @var StockTransfer */
+        return $this->createWithItems($data, $items);
     }
 
     public function save(StockTransfer $transfer): void
     {
-        $transfer->save();
+        $this->saveRecord($transfer);
     }
 }

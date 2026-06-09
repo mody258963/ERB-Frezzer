@@ -7,11 +7,21 @@ use App\Models\User;
 use App\Repositories\Contracts\PartRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class PartRepository implements PartRepositoryInterface
+class PartRepository extends BaseRepository implements PartRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return Part::class;
+    }
+
+    protected function defaultRelations(): array
+    {
+        return ['category'];
+    }
+
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
-        return Part::query()
+        return $this->newQuery()
             ->with(['category'])
             ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
             ->when($filters['category'] ?? null, fn ($q, $key) => $q->whereHas(
@@ -36,18 +46,18 @@ class PartRepository implements PartRepositoryInterface
 
     public function find(string $id): ?Part
     {
-        return Part::query()->with(['category'])->find($id);
+        return $this->findById($id);
     }
 
     public function create(array $data): Part
     {
-        return Part::query()->create($data);
+        /** @var Part */
+        return $this->createRecord($data);
     }
 
     public function update(Part $part, array $data): Part
     {
-        $part->update($data);
-
-        return $part->fresh(['category']);
+        /** @var Part */
+        return $this->updateRecord($part, $data);
     }
 }

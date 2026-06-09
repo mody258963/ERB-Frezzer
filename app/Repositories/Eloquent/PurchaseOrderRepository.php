@@ -8,11 +8,16 @@ use App\Repositories\Contracts\PurchaseOrderRepositoryInterface;
 use App\Support\BranchVisibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class PurchaseOrderRepository implements PurchaseOrderRepositoryInterface
+class PurchaseOrderRepository extends BaseRepository implements PurchaseOrderRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return PurchaseOrder::class;
+    }
+
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
-        $query = PurchaseOrder::query()->with(['supplier', 'branch']);
+        $query = $this->newQuery()->with(['supplier', 'branch']);
 
         BranchVisibility::scope($user, $query, 'branch_id');
 
@@ -27,39 +32,28 @@ class PurchaseOrderRepository implements PurchaseOrderRepositoryInterface
 
     public function findWithRelations(string $id): ?PurchaseOrder
     {
-        return PurchaseOrder::query()
-            ->with(['items.part', 'installments', 'supplier', 'branch', 'creator'])
-            ->find($id);
+        return $this->findByIdWith($id, ['items.part', 'installments', 'supplier', 'branch', 'creator']);
     }
 
     public function findOrFail(string $id): PurchaseOrder
     {
-        return PurchaseOrder::query()->findOrFail($id);
+        /** @var PurchaseOrder */
+        return $this->findByIdOrFail($id);
     }
 
     public function nextPoNumber(): string
     {
-        $max = PurchaseOrder::query()->max('po_number');
-        $n = 1;
-        if ($max && preg_match('/(\d+)$/', (string) $max, $m)) {
-            $n = ((int) $m[1]) + 1;
-        }
-
-        return 'PO-'.str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+        return $this->nextSequentialNumber('po_number', 'PO-', 3);
     }
 
     public function create(array $po, array $items): PurchaseOrder
     {
-        $order = PurchaseOrder::query()->create($po);
-        foreach ($items as $item) {
-            $order->items()->create($item);
-        }
-
-        return $order->load('items');
+        /** @var PurchaseOrder */
+        return $this->createWithItems($po, $items);
     }
 
     public function save(PurchaseOrder $po): void
     {
-        $po->save();
+        $this->saveRecord($po);
     }
 }

@@ -6,14 +6,24 @@ use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class UserRepository implements UserRepositoryInterface
+class UserRepository extends BaseRepository implements UserRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return User::class;
+    }
+
+    protected function defaultRelations(): array
+    {
+        return ['branch'];
+    }
+
     /**
      * @param  array{branch_id?: string, role?: string}  $filters
      */
     public function paginate(array $filters, int $perPage = 25): LengthAwarePaginator
     {
-        return User::query()
+        return $this->newQuery()
             ->with('branch')
             ->when($filters['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
             ->when($filters['role'] ?? null, fn ($q, $role) => $q->where('role', $role))
@@ -23,18 +33,18 @@ class UserRepository implements UserRepositoryInterface
 
     public function find(string $id): ?User
     {
-        return User::query()->with('branch')->find($id);
+        return $this->findById($id);
     }
 
     public function create(array $data): User
     {
-        return User::query()->create($data);
+        /** @var User */
+        return $this->createRecord($data);
     }
 
     public function update(User $user, array $data): User
     {
-        $user->update($data);
-
-        return $user->fresh(['branch']);
+        /** @var User */
+        return $this->updateRecord($user, $data);
     }
 }

@@ -8,18 +8,21 @@ use App\Repositories\Contracts\BranchRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
-class BranchRepository implements BranchRepositoryInterface
+class BranchRepository extends BaseRepository implements BranchRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return Branch::class;
+    }
+
     public function paginate(?User $user, int $perPage = 25): LengthAwarePaginator
     {
-        $query = Branch::query()->latest();
-
-        return $query->paginate($perPage);
+        return $this->newQuery()->latest()->paginate($perPage);
     }
 
     public function allActive(?User $user): Collection
     {
-        return Branch::query()
+        return $this->newQuery()
             ->where('is_active', true)
             ->when($user?->branch_id, fn ($q) => $q->where('id', $user->branch_id))
             ->orderBy('name')
@@ -28,18 +31,18 @@ class BranchRepository implements BranchRepositoryInterface
 
     public function find(string $id): ?Branch
     {
-        return Branch::query()->find($id);
+        return $this->findById($id);
     }
 
     public function create(array $data): Branch
     {
-        return Branch::query()->create($data);
+        /** @var Branch */
+        return $this->createRecord($data);
     }
 
     public function update(Branch $branch, array $data): Branch
     {
-        $branch->update($data);
-
-        return $branch->fresh();
+        /** @var Branch */
+        return $this->updateRecord($branch, $data);
     }
 }

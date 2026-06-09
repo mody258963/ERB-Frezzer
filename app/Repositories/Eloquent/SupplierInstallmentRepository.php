@@ -8,11 +8,21 @@ use App\Repositories\Contracts\SupplierInstallmentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
-class SupplierInstallmentRepository implements SupplierInstallmentRepositoryInterface
+class SupplierInstallmentRepository extends BaseRepository implements SupplierInstallmentRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return SupplierInstallment::class;
+    }
+
+    protected function defaultRelations(): array
+    {
+        return ['supplier', 'purchaseOrder', 'paidByUser'];
+    }
+
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
-        return SupplierInstallment::query()
+        return $this->newQuery()
             ->with(['supplier', 'purchaseOrder'])
             ->when($filters['supplier_id'] ?? null, fn ($q, $id) => $q->where('supplier_id', $id))
             ->when(array_key_exists('is_paid', $filters ?? []) && $filters['is_paid'] !== null, fn ($q) => $q->where('is_paid', filter_var($filters['is_paid'], FILTER_VALIDATE_BOOLEAN)))
@@ -24,19 +34,18 @@ class SupplierInstallmentRepository implements SupplierInstallmentRepositoryInte
 
     public function find(string $id): ?SupplierInstallment
     {
-        return SupplierInstallment::query()
-            ->with(['supplier', 'purchaseOrder', 'paidByUser'])
-            ->find($id);
+        return $this->findById($id);
     }
 
     public function findOrFail(string $id): SupplierInstallment
     {
-        return SupplierInstallment::query()->findOrFail($id);
+        /** @var SupplierInstallment */
+        return $this->findByIdOrFail($id);
     }
 
     public function overdue(): Collection
     {
-        return SupplierInstallment::query()
+        return $this->newQuery()
             ->where('is_paid', false)
             ->whereDate('due_date', '<', now()->toDateString())
             ->with(['supplier', 'purchaseOrder'])
@@ -46,6 +55,6 @@ class SupplierInstallmentRepository implements SupplierInstallmentRepositoryInte
 
     public function save(SupplierInstallment $installment): void
     {
-        $installment->save();
+        $this->saveRecord($installment);
     }
 }

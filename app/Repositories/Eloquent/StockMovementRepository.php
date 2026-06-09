@@ -5,10 +5,16 @@ namespace App\Repositories\Eloquent;
 use App\Models\StockMovement;
 use App\Repositories\Contracts\StockMovementRepositoryInterface;
 
-class StockMovementRepository implements StockMovementRepositoryInterface
+class StockMovementRepository extends BaseRepository implements StockMovementRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return StockMovement::class;
+    }
+
     public function create(array $data): StockMovement
     {
-        return StockMovement::query()->create($data);
+        /** @var StockMovement */
+        return $this->createRecord($data);
     }
 }

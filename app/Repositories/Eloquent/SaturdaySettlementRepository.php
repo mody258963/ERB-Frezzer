@@ -10,25 +10,30 @@ use App\Repositories\Contracts\SaturdaySettlementRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
-class SaturdaySettlementRepository implements SaturdaySettlementRepositoryInterface
+class SaturdaySettlementRepository extends BaseRepository implements SaturdaySettlementRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return SaturdaySettlement::class;
+    }
+
     public function paginate(?User $user, int $perPage = 25): LengthAwarePaginator
     {
-        $query = SaturdaySettlement::query()->with(['customer', 'creator']);
-
-        return $query->latest('created_at')->paginate($perPage);
+        return $this->newQuery()
+            ->with(['customer', 'creator'])
+            ->latest('created_at')
+            ->paginate($perPage);
     }
 
     public function findWithInvoices(string $id): ?SaturdaySettlement
     {
-        return SaturdaySettlement::query()
-            ->with(['customer', 'invoices', 'creator'])
-            ->find($id);
+        return $this->findByIdWith($id, ['customer', 'invoices', 'creator']);
     }
 
     public function create(array $data): SaturdaySettlement
     {
-        return SaturdaySettlement::query()->create($data);
+        /** @var SaturdaySettlement */
+        return $this->createRecord($data);
     }
 
     public function upcomingTotals(): Collection

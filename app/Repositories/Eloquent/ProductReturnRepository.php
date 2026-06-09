@@ -8,11 +8,16 @@ use App\Repositories\Contracts\ProductReturnRepositoryInterface;
 use App\Support\BranchVisibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class ProductReturnRepository implements ProductReturnRepositoryInterface
+class ProductReturnRepository extends BaseRepository implements ProductReturnRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return ProductReturn::class;
+    }
+
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
-        $query = ProductReturn::query()->with(['customer', 'supplier', 'branch']);
+        $query = $this->newQuery()->with(['customer', 'supplier', 'branch']);
 
         BranchVisibility::scope($user, $query, 'branch_id');
 
@@ -27,39 +32,28 @@ class ProductReturnRepository implements ProductReturnRepositoryInterface
 
     public function findWithItems(string $id): ?ProductReturn
     {
-        return ProductReturn::query()
-            ->with(['items.part', 'customer', 'supplier', 'branch', 'creator', 'approver'])
-            ->find($id);
+        return $this->findByIdWith($id, ['items.part', 'customer', 'supplier', 'branch', 'creator', 'approver']);
     }
 
     public function findOrFail(string $id): ProductReturn
     {
-        return ProductReturn::query()->findOrFail($id);
+        /** @var ProductReturn */
+        return $this->findByIdOrFail($id);
     }
 
     public function nextReturnNumber(): string
     {
-        $max = ProductReturn::query()->max('return_number');
-        $n = 1;
-        if ($max && preg_match('/(\d+)$/', (string) $max, $m)) {
-            $n = ((int) $m[1]) + 1;
-        }
-
-        return 'RET-'.str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+        return $this->nextSequentialNumber('return_number', 'RET-', 3);
     }
 
     public function create(array $data, array $items): ProductReturn
     {
-        $ret = ProductReturn::query()->create($data);
-        foreach ($items as $item) {
-            $ret->items()->create($item);
-        }
-
-        return $ret->load('items');
+        /** @var ProductReturn */
+        return $this->createWithItems($data, $items);
     }
 
     public function save(ProductReturn $return): void
     {
-        $return->save();
+        $this->saveRecord($return);
     }
 }

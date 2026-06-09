@@ -9,11 +9,16 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
-class CustomerRepository implements CustomerRepositoryInterface
+class CustomerRepository extends BaseRepository implements CustomerRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return Customer::class;
+    }
+
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
-        return Customer::query()
+        return $this->newQuery()
             ->when($filters['type'] ?? null, fn ($q, $type) => $q->where('type', $type))
             ->when($filters['search'] ?? null, fn ($q, $search) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -25,30 +30,25 @@ class CustomerRepository implements CustomerRepositoryInterface
 
     public function find(string $id): ?Customer
     {
-        return Customer::query()->find($id);
+        return $this->findById($id);
     }
 
     public function findOrFail(string $id): Customer
     {
-        $customer = $this->find($id);
-
-        if ($customer === null) {
-            abort(404);
-        }
-
-        return $customer;
+        /** @var Customer */
+        return $this->findByIdOrFail($id);
     }
 
     public function create(array $data): Customer
     {
-        return Customer::query()->create($data);
+        /** @var Customer */
+        return $this->createRecord($data);
     }
 
     public function update(Customer $customer, array $data): Customer
     {
-        $customer->update($data);
-
-        return $customer->fresh();
+        /** @var Customer */
+        return $this->updateRecord($customer, $data);
     }
 
     public function paginatedInvoices(string $customerId, int $perPage = 50): LengthAwarePaginator

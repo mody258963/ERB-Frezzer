@@ -9,33 +9,39 @@ use App\Models\User;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class SupplierRepository implements SupplierRepositoryInterface
+class SupplierRepository extends BaseRepository implements SupplierRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return Supplier::class;
+    }
+
     public function paginate(?User $user, int $perPage = 25): LengthAwarePaginator
     {
-        return Supplier::query()->latest()->paginate($perPage);
+        return $this->newQuery()->latest()->paginate($perPage);
     }
 
     public function find(string $id): ?Supplier
     {
-        return Supplier::query()->find($id);
+        return $this->findById($id);
     }
 
     public function create(array $data): Supplier
     {
-        return Supplier::query()->create($data);
+        /** @var Supplier */
+        return $this->createRecord($data);
     }
 
     public function update(Supplier $supplier, array $data): Supplier
     {
-        $supplier->update($data);
-
-        return $supplier->fresh();
+        /** @var Supplier */
+        return $this->updateRecord($supplier, $data);
     }
 
     public function debtSnapshot(string $supplierId): array
     {
-        $supplier = $this->find($supplierId) ?? abort(404);
+        /** @var Supplier $supplier */
+        $supplier = $this->findByIdOrFail($supplierId);
 
         return [
             'supplier' => $supplier,

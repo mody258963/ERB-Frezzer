@@ -9,11 +9,16 @@ use App\Support\BranchVisibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
-class InvoiceRepository implements InvoiceRepositoryInterface
+class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInterface
 {
+    protected function modelClass(): string
+    {
+        return Invoice::class;
+    }
+
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
-        $query = Invoice::query()->with(['customer', 'branch']);
+        $query = $this->newQuery()->with(['customer', 'branch']);
 
         BranchVisibility::scope($user, $query, 'branch_id');
 
@@ -30,17 +35,18 @@ class InvoiceRepository implements InvoiceRepositoryInterface
 
     public function findWithItems(string $id): ?Invoice
     {
-        return Invoice::query()->with(['items.part', 'customer', 'branch', 'creator'])->find($id);
+        return $this->findByIdWith($id, ['items.part', 'customer', 'branch', 'creator']);
     }
 
     public function findOrFail(string $id): Invoice
     {
-        return Invoice::query()->findOrFail($id);
+        /** @var Invoice */
+        return $this->findByIdOrFail($id);
     }
 
     public function pendingCredit(?User $user): Collection
     {
-        $query = Invoice::query()
+        $query = $this->newQuery()
             ->where('payment_type', 'credit')
             ->where('is_paid', false)
             ->with(['customer', 'branch']);
@@ -52,27 +58,17 @@ class InvoiceRepository implements InvoiceRepositoryInterface
 
     public function nextInvoiceNumber(): string
     {
-        $max = Invoice::query()->max('invoice_number');
-        $n = 1;
-        if ($max && preg_match('/(\d+)$/', (string) $max, $m)) {
-            $n = ((int) $m[1]) + 1;
-        }
-
-        return 'INV-'.str_pad((string) $n, 4, '0', STR_PAD_LEFT);
+        return $this->nextSequentialNumber('invoice_number', 'INV-');
     }
 
     public function create(array $invoice, array $items): Invoice
     {
-        $model = Invoice::query()->create($invoice);
-        foreach ($items as $item) {
-            $model->items()->create($item);
-        }
-
-        return $model->load('items');
+        /** @var Invoice */
+        return $this->createWithItems($invoice, $items);
     }
 
     public function save(Invoice $invoice): void
     {
-        $invoice->save();
+        $this->saveRecord($invoice);
     }
 }
