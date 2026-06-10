@@ -20,6 +20,7 @@ return new class extends Migration
         Schema::create('capital_adjustments', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('type', 32)->default('manual_set');
+            $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->decimal('previous_amount', 14, 2);
             $table->decimal('new_amount', 14, 2);
             $table->decimal('change_amount', 14, 2);
@@ -28,17 +29,20 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('type');
+            $table->index('branch_id');
         });
 
         Schema::create('owner_cash_outs', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->decimal('amount', 14, 2);
+            $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->text('reason')->nullable();
             $table->text('notes')->nullable();
             $table->foreignUuid('created_by')->constrained('users');
             $table->timestamp('created_at')->useCurrent();
 
             $table->index('created_at');
+            $table->index('branch_id');
         });
     }
 

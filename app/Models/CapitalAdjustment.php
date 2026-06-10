@@ -13,6 +13,7 @@ class CapitalAdjustment extends Model
 
     protected $fillable = [
         'type',
+        'branch_id',
         'previous_amount',
         'new_amount',
         'change_amount',
@@ -33,5 +34,10 @@ class CapitalAdjustment extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

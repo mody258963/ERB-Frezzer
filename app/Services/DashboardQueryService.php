@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Stock;
-use App\Models\Supplier;
 use App\Models\SupplierInstallment;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -31,26 +30,25 @@ class DashboardQueryService
         }
 
         return Cache::remember($cacheKey, self::TTL, function () use ($from, $to, $branchId) {
-            $receivables = Customer::query()->sum('outstanding_balance');
-            $supplierDebt = Supplier::query()->sum('total_debt');
-            $stockValue = Stock::query()
-                ->join('parts', 'parts.id', '=', 'stock.part_id')
-                ->selectRaw('SUM(stock.quantity * parts.cost_price) as v')
-                ->value('v') ?? 0;
+            $capitalSetting = $this->capital->settings();
+            $capitalAmount = $this->capital->capitalAmount($branchId);
+            $capitalSnapshot = $this->capital->financingSnapshot($capitalAmount, $branchId);
+            $profitWithdrawal = $this->capital->profitWithdrawalSnapshot($branchId);
 
             $metrics = $this->financialMetrics->totals($from, $to, $branchId);
             $supplierMetrics = $this->financialMetrics->supplierMetrics($from, $to, $branchId);
-            $capitalSetting = $this->capital->settings();
-            $capitalAmount = (float) $capitalSetting->capital_amount;
-            $capitalSnapshot = $this->capital->financingSnapshot($capitalAmount);
 
             return [
-                'total_receivables' => (float) $receivables,
-                'total_supplier_debt' => (float) $supplierDebt,
-                'total_stock_value_cost' => (float) $stockValue,
+                'branch_id' => $branchId,
+                'total_receivables' => $capitalSnapshot['customer_receivables'],
+                'total_supplier_debt' => $capitalSnapshot['supplier_debt'],
+                'total_stock_value_cost' => $capitalSnapshot['inventory_at_cost'],
                 'business_capital' => $capitalAmount,
                 'capital_currency' => $capitalSetting->currency,
                 'capital_estimated_available' => $capitalSnapshot['estimated_available'],
+                'withdrawable_profit' => $profitWithdrawal['withdrawable_profit'],
+                'realized_profit' => $profitWithdrawal['realized_profit'],
+                'total_owner_cash_outs' => $profitWithdrawal['total_withdrawn'],
                 'weekly_revenue' => $metrics['revenue'],
                 'weekly_discount' => $metrics['discount'],
                 'weekly_customer_refunds' => $metrics['customer_refunds'],
@@ -68,10 +66,15 @@ class DashboardQueryService
         });
     }
 
-    public function inventory(): array
+    public function inventory(?string $branchId = null): array
     {
-        return Stock::query()
-            ->with(['part', 'branch'])
+        $query = Stock::query()->with(['part', 'branch']);
+
+        if ($branchId !== null) {
+            $query->where('branch_id', $branchId);
+        }
+
+        return $query
             ->get()
             ->map(fn (Stock $s) => [
                 'part_id' => $s->part_id,
@@ -86,44 +89,66 @@ class DashboardQueryService
             ->all();
     }
 
-    public function receivables(): array
+    public function receivables(?string $branchId = null): array
     {
-        return Customer::query()
-            ->where('type', 'credit')
+        $customerQuery = Customer::query()->where('type', 'credit');
+
+        if ($branchId !== null) {
+            $customerQuery->whereHas('invoices', fn ($q) => $q
+                ->where('branch_id', $branchId)
+                ->where('payment_type', 'credit')
+                ->where('is_paid', false));
+        }
+
+        return $customerQuery
             ->get()
-            ->map(fn (Customer $c) => [
-                'customer_id' => $c->id,
-                'name' => $c->name,
-                'outstanding_balance' => (float) $c->outstanding_balance,
-                'unpaid_invoices' => Invoice::query()
+            ->map(function (Customer $c) use ($branchId) {
+                $invoiceQuery = Invoice::query()
                     ->where('customer_id', $c->id)
                     ->where('payment_type', 'credit')
-                    ->where('is_paid', false)
-                    ->count(),
-            ])
+                    ->where('is_paid', false);
+
+                if ($branchId !== null) {
+                    $invoiceQuery->where('branch_id', $branchId);
+                }
+
+                $unpaid = $invoiceQuery->get();
+                $balance = (float) $unpaid->sum(fn (Invoice $invoice) => (float) $invoice->balanceDue());
+
+                return [
+                    'customer_id' => $c->id,
+                    'name' => $c->name,
+                    'outstanding_balance' => $balance,
+                    'unpaid_invoices' => $unpaid->count(),
+                ];
+            })
+            ->filter(fn (array $row) => $row['outstanding_balance'] > 0 || $row['unpaid_invoices'] > 0)
             ->values()
             ->all();
     }
 
-    public function payables(): array
+    public function payables(?string $branchId = null): array
     {
-        $upcoming = SupplierInstallment::query()
+        $upcomingQuery = SupplierInstallment::query()
             ->where('is_paid', false)
             ->whereDate('due_date', '<=', now()->addDays(30)->toDateString())
             ->with(['supplier', 'purchaseOrder'])
-            ->orderBy('due_date')
-            ->get();
+            ->orderBy('due_date');
 
-        $overdue = SupplierInstallment::query()
+        $overdueQuery = SupplierInstallment::query()
             ->where('is_paid', false)
             ->whereDate('due_date', '<', now()->toDateString())
             ->with(['supplier'])
-            ->orderBy('due_date')
-            ->get();
+            ->orderBy('due_date');
+
+        if ($branchId !== null) {
+            $upcomingQuery->whereHas('purchaseOrder', fn ($po) => $po->where('branch_id', $branchId));
+            $overdueQuery->whereHas('purchaseOrder', fn ($po) => $po->where('branch_id', $branchId));
+        }
 
         return [
-            'upcoming_30_days' => $upcoming,
-            'overdue' => $overdue,
+            'upcoming_30_days' => $upcomingQuery->get(),
+            'overdue' => $overdueQuery->get(),
         ];
     }
 

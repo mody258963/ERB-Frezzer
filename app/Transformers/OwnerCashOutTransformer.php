@@ -14,6 +14,7 @@ final class OwnerCashOutTransformer
         return [
             'id' => $row->id,
             'amount' => (float) $row->amount,
+            'branch_id' => $row->branch_id,
             'reason' => $row->reason,
             'notes' => $row->notes,
             'created_by' => $row->creator ? [

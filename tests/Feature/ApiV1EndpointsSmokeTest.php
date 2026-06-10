@@ -95,6 +95,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $auth()->getJson('/api/v1/settings/capital')->assertOk();
         $auth()->putJson('/api/v1/settings/capital', [
             'capital_amount' => 100000,
+            'branch_id' => $mainBranchId,
             'reason' => 'Smoke test seed capital',
         ])->assertOk();
         $auth()->getJson('/api/v1/settings/capital/adjustments')->assertOk();

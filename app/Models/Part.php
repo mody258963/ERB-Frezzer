@@ -6,6 +6,7 @@ use App\Enums\PartUnit;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Part extends Model
 {
@@ -29,5 +30,10 @@ class Part extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(PartCategory::class, 'category_id');
+    }
+
+    public function stock(): HasMany
+    {
+        return $this->hasMany(Stock::class);
     }
 }

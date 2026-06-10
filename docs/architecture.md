@@ -339,9 +339,11 @@ When stock is transferred between branches, an optional **inter-branch charge** 
 
 ### 8. Owner capital
 
-- `CompanySetting.capital_amount` — recorded business capital
-- `POST /settings/capital/cash-out` — owner withdraws cash
-- Dashboard shows `business_capital` and rough `capital_estimated_available`
+- `Branch.capital_amount` — recorded business capital **per branch**
+- `CompanySetting` — global currency and notes only (legacy `capital_amount` column unused for reads)
+- `PUT /settings/capital` — set capital for a branch (`branch_id` required when multiple branches exist)
+- `POST /settings/capital/cash-out` — owner withdraws from profit (does not reduce branch capital)
+- Dashboard `business_capital` — sum of all branches, or single branch when filtered
 
 ### 9. Dashboard & reports
 

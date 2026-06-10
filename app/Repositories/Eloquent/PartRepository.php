@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\Part;
 use App\Models\User;
 use App\Repositories\Contracts\PartRepositoryInterface;
+use App\Support\BranchVisibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class PartRepository extends BaseRepository implements PartRepositoryInterface
@@ -21,8 +22,11 @@ class PartRepository extends BaseRepository implements PartRepositoryInterface
 
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
+        $branchId = BranchVisibility::activeBranchId($user);
+
         return $this->newQuery()
             ->with(['category'])
+            ->when($branchId, fn ($q) => $q->whereHas('stock', fn ($s) => $s->where('branch_id', $branchId)))
             ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
             ->when($filters['category'] ?? null, fn ($q, $key) => $q->whereHas(
                 'category',

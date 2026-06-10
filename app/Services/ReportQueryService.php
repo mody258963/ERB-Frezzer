@@ -70,7 +70,7 @@ class ReportQueryService
             $byBranch = [];
         }
 
-        $capitalRow = $this->capital->showWithSnapshot();
+        $capitalRow = $this->capital->showWithSnapshot($branchId);
         $supplierMetrics = $this->financialMetrics->supplierMetrics($fromDate, $toDate, $branchId);
 
         return [

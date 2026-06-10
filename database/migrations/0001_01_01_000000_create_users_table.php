@@ -14,6 +14,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('phone')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->decimal('capital_amount', 14, 2)->default(0);
             $table->timestamps();
         });
 

@@ -11,6 +11,7 @@ use App\Http\Resources\DashboardReceivableRowResource;
 use App\Http\Resources\DashboardSalesResource;
 use App\Http\Resources\DashboardSummaryResource;
 use App\Services\DashboardQueryService;
+use App\Support\BranchVisibility;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class DashboardController extends Controller
@@ -21,31 +22,37 @@ class DashboardController extends Controller
 
     public function summary(BranchScopedRequest $request): DashboardSummaryResource
     {
-        return new DashboardSummaryResource(
-            $this->dashboard->summary($request->validated('branch_id'))
-        );
+        $branchId = BranchVisibility::activeBranchId($request->user());
+
+        return new DashboardSummaryResource($this->dashboard->summary($branchId));
     }
 
-    public function inventory(): AnonymousResourceCollection
+    public function inventory(BranchScopedRequest $request): AnonymousResourceCollection
     {
-        return DashboardInventoryRowResource::collection(collect($this->dashboard->inventory()));
+        $branchId = BranchVisibility::activeBranchId($request->user());
+
+        return DashboardInventoryRowResource::collection(collect($this->dashboard->inventory($branchId)));
     }
 
-    public function receivables(): AnonymousResourceCollection
+    public function receivables(BranchScopedRequest $request): AnonymousResourceCollection
     {
-        return DashboardReceivableRowResource::collection(collect($this->dashboard->receivables()));
+        $branchId = BranchVisibility::activeBranchId($request->user());
+
+        return DashboardReceivableRowResource::collection(collect($this->dashboard->receivables($branchId)));
     }
 
-    public function payables(): DashboardPayablesResource
+    public function payables(BranchScopedRequest $request): DashboardPayablesResource
     {
-        return new DashboardPayablesResource($this->dashboard->payables());
+        $branchId = BranchVisibility::activeBranchId($request->user());
+
+        return new DashboardPayablesResource($this->dashboard->payables($branchId));
     }
 
     public function sales(BranchScopedRequest $request): DashboardSalesResource
     {
-        return new DashboardSalesResource(
-            $this->dashboard->sales($request->validated('branch_id'))
-        );
+        $branchId = BranchVisibility::activeBranchId($request->user());
+
+        return new DashboardSalesResource($this->dashboard->sales($branchId));
     }
 
     public function activity(): AnonymousResourceCollection

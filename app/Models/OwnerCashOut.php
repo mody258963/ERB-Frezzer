@@ -14,6 +14,7 @@ class OwnerCashOut extends Model
 
     protected $fillable = [
         'amount',
+        'branch_id',
         'reason',
         'notes',
         'created_by',
@@ -31,5 +32,10 @@ class OwnerCashOut extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

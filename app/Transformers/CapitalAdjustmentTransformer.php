@@ -13,6 +13,11 @@ final class CapitalAdjustmentTransformer
     {
         return [
             'id' => $row->id,
+            'branch_id' => $row->branch_id,
+            'branch' => $row->branch ? [
+                'id' => $row->branch->id,
+                'name' => $row->branch->name,
+            ] : null,
             'type' => $row->type?->value ?? 'manual_set',
             'previous_amount' => (float) $row->previous_amount,
             'new_amount' => (float) $row->new_amount,

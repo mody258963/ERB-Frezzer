@@ -10,11 +10,14 @@ class Branch extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['name', 'address', 'phone', 'is_active'];
+    protected $fillable = ['name', 'address', 'phone', 'is_active', 'capital_amount'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'capital_amount' => 'decimal:2',
+        ];
     }
 
     public function users(): HasMany

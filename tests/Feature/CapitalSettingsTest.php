@@ -98,6 +98,44 @@ class CapitalSettingsTest extends TestCase
         $this->assertEquals(99000.0, $show['financing_snapshot']['estimated_available']);
     }
 
+    public function test_capital_is_stored_per_branch(): void
+    {
+        $branchA = Branch::query()->firstOrFail();
+        $branchB = Branch::query()->create([
+            'name' => 'Capital Branch B',
+            'address' => null,
+            'phone' => null,
+            'is_active' => true,
+        ]);
+
+        $this->withToken($this->adminToken)
+            ->putJson('/api/v1/settings/capital', [
+                'capital_amount' => 100000,
+                'branch_id' => $branchA->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('branch_id', $branchA->id)
+            ->assertJsonPath('capital_amount', 100000);
+
+        $this->withToken($this->adminToken)
+            ->putJson('/api/v1/settings/capital', [
+                'capital_amount' => 40000,
+                'branch_id' => $branchB->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('capital_amount', 40000);
+
+        $this->withToken($this->adminToken)
+            ->getJson('/api/v1/dashboard/summary')
+            ->assertOk()
+            ->assertJsonPath('business_capital', 140000);
+
+        $this->withToken($this->adminToken)
+            ->getJson('/api/v1/dashboard/summary?branch_id='.$branchB->id)
+            ->assertOk()
+            ->assertJsonPath('business_capital', 40000);
+    }
+
     public function test_non_admin_cannot_update_capital(): void
     {
         $branch = Branch::query()->firstOrFail();

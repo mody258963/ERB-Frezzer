@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use App\Models\SupplierInstallment;
 use App\Models\User;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
+use App\Support\BranchVisibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class SupplierRepository extends BaseRepository implements SupplierRepositoryInterface
@@ -18,7 +19,15 @@ class SupplierRepository extends BaseRepository implements SupplierRepositoryInt
 
     public function paginate(?User $user, int $perPage = 25): LengthAwarePaginator
     {
-        return $this->newQuery()->latest()->paginate($perPage);
+        $branchId = BranchVisibility::activeBranchId($user);
+
+        return $this->newQuery()
+            ->when($branchId, fn ($q) => $q->whereHas(
+                'purchaseOrders',
+                fn ($po) => $po->where('branch_id', $branchId)
+            ))
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function find(string $id): ?Supplier
@@ -38,21 +47,26 @@ class SupplierRepository extends BaseRepository implements SupplierRepositoryInt
         return $this->updateRecord($supplier, $data);
     }
 
-    public function debtSnapshot(string $supplierId): array
+    public function debtSnapshot(string $supplierId, ?string $branchId = null): array
     {
         /** @var Supplier $supplier */
         $supplier = $this->findByIdOrFail($supplierId);
+        $branchId = $branchId ?? BranchVisibility::activeBranchId();
+
+        $poQuery = PurchaseOrder::query()->where('supplier_id', $supplierId);
+        $installmentQuery = SupplierInstallment::query()->where('supplier_id', $supplierId);
+
+        if ($branchId !== null) {
+            $poQuery->where('branch_id', $branchId);
+            $installmentQuery->whereHas('purchaseOrder', fn ($po) => $po->where('branch_id', $branchId));
+        }
 
         return [
             'supplier' => $supplier,
-            'purchase_orders' => PurchaseOrder::query()
-                ->where('supplier_id', $supplierId)
+            'purchase_orders' => $poQuery
                 ->with(['items.part', 'installments', 'branch', 'supplier', 'creator'])
                 ->get(),
-            'installments' => SupplierInstallment::query()
-                ->where('supplier_id', $supplierId)
-                ->orderBy('due_date')
-                ->get(),
+            'installments' => $installmentQuery->orderBy('due_date')->get(),
         ];
     }
 }

@@ -26,7 +26,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/health', HealthController::class);
 
     Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::middleware('auth:api')->group(function () {
+    Route::middleware(['auth:api', 'branch.filter'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
 

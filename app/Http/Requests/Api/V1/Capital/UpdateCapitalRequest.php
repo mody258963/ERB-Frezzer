@@ -10,6 +10,7 @@ class UpdateCapitalRequest extends ApiFormRequest
     {
         return [
             'capital_amount' => ['required', 'numeric', 'min:0'],
+            'branch_id' => ['nullable', 'uuid', 'exists:branches,id'],
             'reason' => ['nullable', 'string', 'max:2000'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ];

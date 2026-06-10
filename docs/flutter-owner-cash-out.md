@@ -1,6 +1,9 @@
 # Flutter — owner cash out (admin)
 
-When the **owner/admin takes money out** of the business (personal withdrawal, draw, etc.), record it with **cash out**. This **reduces** `business_capital` on the dashboard and keeps an audit trail.
+> **⚠️ Updated June 2026:** Cash out now deducts from **profit margin**, not `business_capital`.  
+> **Follow [flutter-owner-cash-out-profit-validation.md](./flutter-owner-cash-out-profit-validation.md)** — this file is kept for API shape reference only.
+
+When the **owner/admin takes money out** of the business (personal withdrawal, draw, etc.), record it with **cash out**. This **reduces withdrawable profit** (not capital) and keeps an audit trail.
 
 **Roles:** `admin` only  
 **Related:** [flutter-dashboard-transactions-guide.md](./flutter-dashboard-transactions-guide.md), [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md)

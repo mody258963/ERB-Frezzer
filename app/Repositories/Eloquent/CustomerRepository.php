@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
+use App\Support\BranchVisibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -18,7 +19,10 @@ class CustomerRepository extends BaseRepository implements CustomerRepositoryInt
 
     public function paginate(?User $user, array $filters, int $perPage = 25): LengthAwarePaginator
     {
+        $branchId = BranchVisibility::activeBranchId($user);
+
         return $this->newQuery()
+            ->when($branchId, fn ($q) => $q->whereHas('invoices', fn ($inv) => $inv->where('branch_id', $branchId)))
             ->when($filters['type'] ?? null, fn ($q, $type) => $q->where('type', $type))
             ->when($filters['search'] ?? null, fn ($q, $search) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")

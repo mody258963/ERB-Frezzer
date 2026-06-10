@@ -3,6 +3,7 @@
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\ReturnQuantityExceededException;
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\ResolveBranchFilter;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => EnsureRole::class,
+            'branch.filter' => ResolveBranchFilter::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
