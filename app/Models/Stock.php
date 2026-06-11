@@ -12,11 +12,14 @@ class Stock extends Model
 
     protected $table = 'stock';
 
-    protected $fillable = ['part_id', 'branch_id', 'quantity'];
+    protected $fillable = ['part_id', 'branch_id', 'quantity', 'average_cost'];
 
     protected function casts(): array
     {
-        return ['quantity' => 'integer'];
+        return [
+            'quantity' => 'integer',
+            'average_cost' => 'decimal:2',
+        ];
     }
 
     public function part(): BelongsTo

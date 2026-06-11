@@ -17,7 +17,7 @@ class StorePartRequest extends ApiFormRequest
             'category_key' => ['nullable', 'string', 'max:64', 'required_without:category_id'],
             'unit' => ['required', Rule::enum(PartUnit::class)],
             'sell_price' => ['required', 'numeric', 'min:0'],
-            'cost_price' => ['required', 'numeric', 'min:0'],
+            'cost_price' => ['nullable', 'numeric', 'min:0'],
             'min_stock' => ['required', 'integer', 'min:0'],
             'is_active' => ['boolean'],
         ];

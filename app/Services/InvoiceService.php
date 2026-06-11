@@ -9,6 +9,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Part;
+use App\Models\Stock;
 use App\Models\User;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\Support\BranchAccess;
@@ -22,6 +23,7 @@ class InvoiceService
         private InvoiceRepositoryInterface $invoices,
         private StockRepositoryInterface $stock,
         private StockMovementRepositoryInterface $movements,
+        private WeightedAverageCostService $wac,
         private AuditLogService $audit,
         private DashboardCacheService $dashboardCache,
         private LowStockBroadcaster $lowStock,
@@ -64,10 +66,16 @@ class InvoiceService
                 $lineTotal = bcmul($unit, (string) $line['quantity'], 2);
                 $subtotal = bcadd($subtotal, $lineTotal, 2);
 
+                $stock = $this->stock->lockForPartAndBranch($line['part_id'], $data['branch_id']);
+                $unitCost = $stock
+                    ? $this->wac->snapshotCost($stock)
+                    : (string) $part->cost_price;
+
                 $linesOut[] = [
                     'part_id' => $part->id,
                     'quantity' => $line['quantity'],
                     'unit_price' => $unit,
+                    'unit_cost' => $unitCost,
                     'total' => $lineTotal,
                     '_line' => $line,
                 ];
@@ -108,6 +116,7 @@ class InvoiceService
                     'part_id' => $r['part_id'],
                     'quantity' => $r['quantity'],
                     'unit_price' => $r['unit_price'],
+                    'unit_cost' => $r['unit_cost'],
                     'total' => $r['total'],
                 ], $linesOut)
             );
@@ -161,7 +170,8 @@ class InvoiceService
         DB::transaction(function () use ($user, $invoice) {
             foreach ($invoice->items as $item) {
                 $stock = $this->stock->firstOrCreate($item->part_id, $invoice->branch_id);
-                $this->stock->adjustQuantity($stock, $item->quantity);
+                $stock = Stock::query()->whereKey($stock->id)->lockForUpdate()->firstOrFail();
+                $this->wac->applyInbound($stock, (int) $item->quantity, (string) $item->unit_cost);
                 $this->movements->create([
                     'part_id' => $item->part_id,
                     'branch_id' => $invoice->branch_id,

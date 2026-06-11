@@ -82,6 +82,8 @@ class DashboardQueryService
                 'branch_id' => $s->branch_id,
                 'branch_name' => $s->branch?->name,
                 'quantity' => $s->quantity,
+                'average_cost' => (float) $s->average_cost,
+                'value_at_cost' => (float) bcmul((string) $s->quantity, (string) $s->average_cost, 2),
                 'min_stock' => $s->part?->min_stock,
                 'low' => $s->part && $s->quantity < $s->part->min_stock,
             ])

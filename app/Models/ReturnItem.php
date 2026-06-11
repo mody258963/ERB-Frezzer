@@ -14,7 +14,7 @@ class ReturnItem extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'return_id', 'part_id', 'quantity', 'unit_price', 'condition', 'total',
+        'return_id', 'part_id', 'quantity', 'unit_price', 'unit_cost', 'condition', 'total',
     ];
 
     protected function casts(): array
@@ -22,6 +22,7 @@ class ReturnItem extends Model
         return [
             'quantity' => 'integer',
             'unit_price' => 'decimal:2',
+            'unit_cost' => 'decimal:2',
             'total' => 'decimal:2',
             'condition' => ReturnItemCondition::class,
         ];

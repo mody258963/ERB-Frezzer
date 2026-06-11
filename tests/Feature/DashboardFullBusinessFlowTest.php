@@ -64,6 +64,7 @@ class DashboardFullBusinessFlowTest extends TestCase
             'part_id' => $this->part->id,
             'branch_id' => $this->branch->id,
             'quantity' => 20,
+            'average_cost' => 100,
         ]);
 
         $this->supplier = Supplier::query()->create([
@@ -113,7 +114,7 @@ class DashboardFullBusinessFlowTest extends TestCase
             'total_receivables' => 0.0,
         ]);
 
-        // 2) Purchase 100,000 EGP on 4 installments (before receive)
+        // 2) Purchase 1,000 EGP on 4 installments (before receive)
         $poId = (string) $auth()->postJson('/api/v1/purchases', [
             'supplier_id' => $this->supplier->id,
             'branch_id' => $this->branch->id,
@@ -121,16 +122,16 @@ class DashboardFullBusinessFlowTest extends TestCase
             'installment_count' => 4,
             'installment_start_date' => now()->toDateString(),
             'items' => [
-                ['part_id' => $this->part->id, 'quantity' => 10, 'unit_cost' => 10000],
+                ['part_id' => $this->part->id, 'quantity' => 10, 'unit_cost' => 100],
             ],
         ])->assertCreated()->json('id');
 
         $this->assertDashboard([
             'business_capital' => 500000.0,
-            'total_supplier_debt' => 100000.0,
-            'weekly_purchases_ordered' => 100000.0,
+            'total_supplier_debt' => 1000.0,
+            'weekly_purchases_ordered' => 1000.0,
             'weekly_purchases_received' => 0.0,
-            'unpaid_installments_total' => 100000.0,
+            'unpaid_installments_total' => 1000.0,
             'unpaid_installments_count' => 4,
             'weekly_supplier_payments' => 0.0,
         ]);
@@ -142,11 +143,11 @@ class DashboardFullBusinessFlowTest extends TestCase
 
         // Stock: 20 + 10 = 30 units × cost 100 = 3000
         $this->assertDashboard([
-            'weekly_purchases_received' => 100000.0,
+            'weekly_purchases_received' => 1000.0,
             'total_stock_value_cost' => 3000.0,
         ]);
 
-        // 4) Pay first supplier installment (25,000)
+        // 4) Pay first supplier installment (250)
         $installmentId = (string) $auth()->getJson("/api/v1/purchases/{$poId}")
             ->json('installments.0.id');
 
@@ -155,9 +156,9 @@ class DashboardFullBusinessFlowTest extends TestCase
         ])->assertOk();
 
         $this->assertDashboard([
-            'total_supplier_debt' => 75000.0,
-            'weekly_supplier_payments' => 25000.0,
-            'unpaid_installments_total' => 75000.0,
+            'total_supplier_debt' => 750.0,
+            'weekly_supplier_payments' => 250.0,
+            'unpaid_installments_total' => 750.0,
             'unpaid_installments_count' => 3,
         ]);
 
@@ -244,8 +245,8 @@ class DashboardFullBusinessFlowTest extends TestCase
         $this->assertEquals(600.0, $report['totals']['revenue']);
         $this->assertEquals(200.0, $report['totals']['customer_refunds']);
         $this->assertEquals(200.0, $report['totals']['profit']);
-        $this->assertEquals(25000.0, $report['suppliers']['payments_in_period']);
-        $this->assertEquals(100000.0, $report['suppliers']['purchases_ordered_in_period']);
+        $this->assertEquals(250.0, $report['suppliers']['payments_in_period']);
+        $this->assertEquals(1000.0, $report['suppliers']['purchases_ordered_in_period']);
         $this->assertEquals(500000.0, $report['capital']['capital_amount']);
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Api\V1\ProductReturn;
 use App\Enums\ReturnReferenceType;
 use App\Enums\ReturnType;
 use App\Http\Requests\Api\V1\ApiFormRequest;
+use App\Models\InvoiceItem;
 use App\Services\ReturnQuantityValidator;
 
 class StoreProductReturnRequest extends ApiFormRequest
@@ -37,6 +38,15 @@ class StoreProductReturnRequest extends ApiFormRequest
         $items = [];
         $totalValue = '0';
 
+        $invoiceUnitCosts = [];
+        if ($data['return_type'] === ReturnType::CustomerReturn->value
+            && $data['reference_type'] === ReturnReferenceType::Invoice->value) {
+            $invoiceUnitCosts = InvoiceItem::query()
+                ->where('invoice_id', $data['reference_id'])
+                ->pluck('unit_cost', 'part_id')
+                ->all();
+        }
+
         foreach ($data['items'] as $row) {
             $lineTotal = bcmul((string) $row['unit_price'], (string) $row['quantity'], 2);
             $totalValue = bcadd($totalValue, $lineTotal, 2);
@@ -44,6 +54,9 @@ class StoreProductReturnRequest extends ApiFormRequest
                 'part_id' => $row['part_id'],
                 'quantity' => $row['quantity'],
                 'unit_price' => (string) $row['unit_price'],
+                'unit_cost' => isset($invoiceUnitCosts[$row['part_id']])
+                    ? (string) $invoiceUnitCosts[$row['part_id']]
+                    : null,
                 'condition' => $row['condition'],
                 'total' => $lineTotal,
             ];

@@ -11,6 +11,7 @@ use App\Enums\StockMovementType;
 use App\Models\Customer;
 use App\Models\ProductReturn;
 use App\Models\ReturnItem;
+use App\Models\Stock;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Repositories\Contracts\ProductReturnRepositoryInterface;
@@ -27,6 +28,7 @@ class ReturnService
         private AuditLogService $audit,
         private DashboardCacheService $dashboardCache,
         private ReturnQuantityValidator $returnQuantities,
+        private WeightedAverageCostService $wac,
     ) {}
 
     public function approve(User $user, ProductReturn $return, string $resolution): ProductReturn
@@ -140,7 +142,12 @@ class ReturnService
         string $notes,
     ): void {
         $stock = $this->stock->firstOrCreate($item->part_id, $return->branch_id);
-        $this->stock->adjustQuantity($stock, $item->quantity);
+        $stock = Stock::query()->whereKey($stock->id)->lockForUpdate()->firstOrFail();
+        $this->wac->applyInbound(
+            $stock,
+            (int) $item->quantity,
+            $this->wac->snapshotCost($stock),
+        );
         $this->movements->create([
             'part_id' => $item->part_id,
             'branch_id' => $return->branch_id,

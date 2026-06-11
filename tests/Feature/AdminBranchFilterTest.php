@@ -48,8 +48,8 @@ class AdminBranchFilterTest extends TestCase
             'is_active' => true,
         ]);
 
-        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branchA->id, 'quantity' => 5]);
-        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branchB->id, 'quantity' => 50]);
+        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branchA->id, 'quantity' => 5, 'average_cost' => 40]);
+        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branchB->id, 'quantity' => 50, 'average_cost' => 40]);
 
         $allSummary = $this->withToken($token)->getJson('/api/v1/dashboard/summary')->assertOk()->json();
         $branchBSummary = $this->withToken($token)

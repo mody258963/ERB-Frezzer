@@ -83,7 +83,7 @@ class CapitalSettingsTest extends TestCase
             'min_stock' => 0,
             'is_active' => true,
         ]);
-        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branch->id, 'quantity' => 10]);
+        Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branch->id, 'quantity' => 10, 'average_cost' => 100]);
 
         $this->withToken($this->adminToken)->putJson('/api/v1/settings/capital', [
             'capital_amount' => 100000,

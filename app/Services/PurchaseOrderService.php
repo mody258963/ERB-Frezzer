@@ -6,6 +6,7 @@ use App\Enums\PurchaseOrderStatus;
 use App\Enums\PurchasePaymentType;
 use App\Enums\StockMovementType;
 use App\Models\PurchaseOrder;
+use App\Models\Stock;
 use App\Models\Supplier;
 use App\Models\SupplierInstallment;
 use App\Models\User;
@@ -21,6 +22,7 @@ class PurchaseOrderService
         private PurchaseOrderRepositoryInterface $purchaseOrders,
         private StockRepositoryInterface $stock,
         private StockMovementRepositoryInterface $movements,
+        private WeightedAverageCostService $wac,
         private AuditLogService $audit,
         private DashboardCacheService $dashboardCache,
     ) {}
@@ -124,7 +126,8 @@ class PurchaseOrderService
             $po->load('items');
             foreach ($po->items as $item) {
                 $stock = $this->stock->firstOrCreate($item->part_id, $po->branch_id);
-                $this->stock->adjustQuantity($stock, $item->quantity);
+                $stock = Stock::query()->whereKey($stock->id)->lockForUpdate()->firstOrFail();
+                $this->wac->applyInbound($stock, (int) $item->quantity, (string) $item->unit_cost);
                 $this->movements->create([
                     'part_id' => $item->part_id,
                     'branch_id' => $po->branch_id,

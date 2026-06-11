@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignUuid('part_id')->constrained('parts')->cascadeOnDelete();
             $table->foreignUuid('branch_id')->constrained('branches')->cascadeOnDelete();
             $table->integer('quantity')->default(0);
+            $table->decimal('average_cost', 14, 2)->default(0);
             $table->timestamps();
 
             $table->unique(['part_id', 'branch_id']);

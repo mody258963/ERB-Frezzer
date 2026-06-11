@@ -6,6 +6,7 @@ use App\Enums\BranchFinancialEntryStatus;
 use App\Enums\BranchFinancialEntryType;
 use App\Models\BranchFinancialEntry;
 use App\Models\Part;
+use App\Models\Stock;
 use App\Models\StockTransfer;
 use App\Models\User;
 use App\Repositories\Contracts\BranchFinancialEntryRepositoryInterface;
@@ -34,9 +35,17 @@ class BranchFinanceService
         $amount = '0';
         foreach ($transfer->items as $item) {
             $part = $item->part ?? Part::query()->find($item->part_id);
+            $fromStock = Stock::query()
+                ->where('part_id', $item->part_id)
+                ->where('branch_id', $transfer->from_branch_id)
+                ->first();
+            $costUnit = (string) ($fromStock?->average_cost ?? '0');
+            if (bccomp($costUnit, '0', 2) <= 0) {
+                $costUnit = (string) ($part?->cost_price ?? '0');
+            }
             $unit = $valuation === 'sell'
                 ? (string) ($part?->sell_price ?? 0)
-                : (string) ($part?->cost_price ?? 0);
+                : $costUnit;
             $line = bcmul($unit, (string) $item->quantity, 2);
             $amount = bcadd($amount, $line, 2);
         }

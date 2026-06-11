@@ -102,15 +102,15 @@ class ReportQueryService
     {
         return Stock::query()
             ->join('parts', 'parts.id', '=', 'stock.part_id')
-            ->selectRaw('stock.part_id, parts.code, parts.name, SUM(stock.quantity) as qty, parts.cost_price, parts.sell_price')
-            ->groupBy('stock.part_id', 'parts.code', 'parts.name', 'parts.cost_price', 'parts.sell_price')
+            ->selectRaw('stock.part_id, parts.code, parts.name, SUM(stock.quantity) as qty, SUM(stock.quantity * stock.average_cost) as value_cost, parts.sell_price')
+            ->groupBy('stock.part_id', 'parts.code', 'parts.name', 'parts.sell_price')
             ->get()
             ->map(fn ($r) => [
                 'part_id' => $r->part_id,
                 'code' => $r->code,
                 'name' => $r->name,
-                'quantity' => $r->qty,
-                'value_cost' => (float) bcmul((string) $r->cost_price, (string) $r->qty, 2),
+                'quantity' => (int) $r->qty,
+                'value_cost' => (float) ($r->value_cost ?? 0),
                 'value_sell' => (float) bcmul((string) $r->sell_price, (string) $r->qty, 2),
             ])
             ->all();

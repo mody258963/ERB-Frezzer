@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\StockMovementType;
 use App\Enums\StockTransferStatus;
+use App\Models\Stock;
 use App\Models\StockTransfer;
 use App\Models\User;
 use App\Repositories\Contracts\StockMovementRepositoryInterface;
@@ -17,6 +18,7 @@ class StockTransferService
         private StockTransferRepositoryInterface $transfers,
         private StockRepositoryInterface $stock,
         private StockMovementRepositoryInterface $movements,
+        private WeightedAverageCostService $wac,
         private BranchFinanceService $branchFinance,
         private AuditLogService $audit,
         private DashboardCacheService $dashboardCache,
@@ -37,10 +39,13 @@ class StockTransferService
                 if (! $from || $from->quantity < $item->quantity) {
                     throw new \InvalidArgumentException('Insufficient stock at source branch for part '.$item->part_id);
                 }
+
+                $sourceUnitCost = $this->wac->snapshotCost($from);
                 $this->stock->adjustQuantity($from, -1 * $item->quantity);
 
                 $to = $this->stock->firstOrCreate($item->part_id, $transfer->to_branch_id);
-                $this->stock->adjustQuantity($to, $item->quantity);
+                $to = Stock::query()->whereKey($to->id)->lockForUpdate()->firstOrFail();
+                $this->wac->applyInbound($to, (int) $item->quantity, $sourceUnitCost);
 
                 $this->movements->create([
                     'part_id' => $item->part_id,

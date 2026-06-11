@@ -12,13 +12,14 @@ class InvoiceItem extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['invoice_id', 'part_id', 'quantity', 'unit_price', 'total'];
+    protected $fillable = ['invoice_id', 'part_id', 'quantity', 'unit_price', 'unit_cost', 'total'];
 
     protected function casts(): array
     {
         return [
             'quantity' => 'integer',
             'unit_price' => 'decimal:2',
+            'unit_cost' => 'decimal:2',
             'total' => 'decimal:2',
         ];
     }

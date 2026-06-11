@@ -37,11 +37,16 @@ class PartAnalysisService
         $purchases = $this->purchaseMetrics($part->id, $from, $to, $branchId);
         $returns = $this->returnMetrics($part->id, $from, $to, $branchId);
 
-        $costPrice = (string) $part->cost_price;
         $sellPrice = (string) $part->sell_price;
-        $valueCost = (float) bcmul($costPrice, (string) $totalQty, 2);
+        $valueCost = (float) array_sum(array_map(
+            fn (array $row) => (float) bcmul((string) $row['quantity'], (string) $row['average_cost'], 2),
+            $stockRows,
+        ));
+        $rollupCost = $totalQty > 0
+            ? bcdiv((string) $valueCost, (string) $totalQty, 2)
+            : (string) $part->cost_price;
         $valueSell = (float) bcmul($sellPrice, (string) $totalQty, 2);
-        $estimatedCogs = (float) bcmul($costPrice, (string) $sales['units_sold'], 2);
+        $estimatedCogs = $this->estimatedCogs($part->id, $from, $to, $branchId);
         $grossProfit = (float) bcsub((string) $sales['revenue'], (string) $estimatedCogs, 2);
         $netUnitsSold = max(0, $sales['units_sold'] - $returns['units_returned']);
         $netRevenue = (float) bcsub((string) $sales['revenue'], (string) $returns['value'], 2);
@@ -59,7 +64,8 @@ class PartAnalysisService
                 'is_below_min_stock' => $totalQty < $part->min_stock,
                 'value_at_cost' => $valueCost,
                 'value_at_sell' => $valueSell,
-                'margin_per_unit' => (float) bcsub($sellPrice, $costPrice, 2),
+                'average_cost' => (float) $rollupCost,
+                'margin_per_unit' => (float) bcsub($sellPrice, $rollupCost, 2),
                 'by_branch' => $stockRows,
             ],
             'sales' => array_merge($sales, [
@@ -109,7 +115,22 @@ class PartAnalysisService
             'branch_id' => $s->branch_id,
             'branch_name' => $s->branch?->name,
             'quantity' => (int) $s->quantity,
+            'average_cost' => (float) $s->average_cost,
+            'value_at_cost' => (float) bcmul((string) $s->quantity, (string) $s->average_cost, 2),
         ])->values()->all();
+    }
+
+    private function estimatedCogs(string $partId, ?string $from, ?string $to, ?string $branchId): float
+    {
+        $query = InvoiceItem::query()
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->where('invoice_items.part_id', $partId);
+
+        $this->applyInvoiceFilters($query, $from, $to, $branchId);
+
+        return (float) ($query
+            ->selectRaw('COALESCE(SUM(invoice_items.unit_cost * invoice_items.quantity), 0) as cogs')
+            ->value('cogs') ?? 0);
     }
 
     /**

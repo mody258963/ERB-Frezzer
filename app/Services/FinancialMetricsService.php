@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ReturnReferenceType;
 use App\Enums\ReturnResolution;
 use App\Enums\ReturnStatus;
 use App\Enums\ReturnType;
@@ -52,7 +53,6 @@ class FinancialMetricsService
 
         $grossProfitQuery = Invoice::query()
             ->join('invoice_items', 'invoice_items.invoice_id', '=', 'invoices.id')
-            ->join('parts', 'parts.id', '=', 'invoice_items.part_id')
             ->where('invoices.created_at', '>=', $from)
             ->where('invoices.created_at', '<=', $to);
 
@@ -61,7 +61,7 @@ class FinancialMetricsService
         }
 
         $grossProfit = (float) ($grossProfitQuery
-            ->selectRaw('SUM((invoice_items.unit_price - parts.cost_price) * invoice_items.quantity) as p')
+            ->selectRaw('SUM((invoice_items.unit_price - invoice_items.unit_cost) * invoice_items.quantity) as p')
             ->value('p') ?? 0);
 
         $customerRefunds = $this->sumCustomerRefunds($from, $to, $branchId);
@@ -170,7 +170,11 @@ class FinancialMetricsService
     ): float {
         $query = ReturnItem::query()
             ->join('returns', 'returns.id', '=', 'return_items.return_id')
-            ->join('parts', 'parts.id', '=', 'return_items.part_id')
+            ->leftJoin('invoice_items', function ($join) {
+                $join->on('invoice_items.invoice_id', '=', 'returns.reference_id')
+                    ->on('invoice_items.part_id', '=', 'return_items.part_id')
+                    ->where('returns.reference_type', ReturnReferenceType::Invoice->value);
+            })
             ->where('returns.status', ReturnStatus::Completed->value)
             ->where('returns.return_type', ReturnType::CustomerReturn->value)
             ->whereIn('returns.resolution', self::CUSTOMER_REFUND_RESOLUTIONS)
@@ -191,7 +195,7 @@ class FinancialMetricsService
         }
 
         return (float) ($query
-            ->selectRaw('SUM((return_items.unit_price - parts.cost_price) * return_items.quantity) as impact')
+            ->selectRaw('SUM((return_items.unit_price - COALESCE(return_items.unit_cost, invoice_items.unit_cost, 0)) * return_items.quantity) as impact')
             ->value('impact') ?? 0);
     }
 

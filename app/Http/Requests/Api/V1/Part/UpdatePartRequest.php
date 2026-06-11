@@ -19,7 +19,6 @@ class UpdatePartRequest extends ApiFormRequest
             'category_key' => ['sometimes', 'string', 'max:64'],
             'unit' => ['sometimes', Rule::enum(PartUnit::class)],
             'sell_price' => ['sometimes', 'numeric'],
-            'cost_price' => ['sometimes', 'numeric'],
             'min_stock' => ['sometimes', 'integer'],
             'is_active' => ['boolean'],
         ];

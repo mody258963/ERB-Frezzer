@@ -275,9 +275,11 @@ Models cast DB columns to these enums.
 | Stock movements | `StockMovement` | Written on sale, purchase receive, return, adjust |
 | Transfers | `StockTransfer` | `POST /transfers`, complete moves qty between branches |
 
-**Flow — sale:** `InvoiceService` reduces `stock.quantity`, creates `StockMovement` (SaleOut).
+**Flow — sale:** `InvoiceService` snapshots `invoice_items.unit_cost` from `stock.average_cost`, reduces quantity, creates `StockMovement` (SaleOut). Average cost is unchanged on sale.
 
-**Flow — receive PO:** `PurchaseOrderService` increases stock at branch.
+**Flow — receive PO:** `PurchaseOrderService` blends `stock.average_cost` via `WeightedAverageCostService` using PO line `unit_cost`, then increases quantity.
+
+**Weighted average cost (per branch):** `new_avg = (old_qty × old_avg + incoming_qty × incoming_cost) ÷ (old_qty + incoming_qty)`. `parts.cost_price` is a rollup across branches for catalog display only — do not edit manually after purchases start. See [flutter-weighted-average-cost.md](./flutter-weighted-average-cost.md).
 
 ### 2. Sales (invoices)
 

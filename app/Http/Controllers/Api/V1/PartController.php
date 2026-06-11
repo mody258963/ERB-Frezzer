@@ -73,7 +73,7 @@ class PartController extends Controller
             'category_id' => PartLookupResolver::resolveCategoryId($data),
             'unit' => $data['unit'],
             'sell_price' => $data['sell_price'],
-            'cost_price' => $data['cost_price'],
+            'cost_price' => $data['cost_price'] ?? 0,
             'min_stock' => $data['min_stock'],
             'is_active' => $data['is_active'] ?? true,
         ]);
@@ -87,6 +87,7 @@ class PartController extends Controller
     {
         $part = $this->resolveOrFail($this->parts->find($id));
         $data = $request->validated();
+        unset($data['cost_price']);
 
         if (isset($data['category_id']) || isset($data['category_key'])) {
             $data['category_id'] = PartLookupResolver::resolveCategoryId([

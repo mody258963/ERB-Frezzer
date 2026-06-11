@@ -36,6 +36,7 @@ return new class extends Migration
             $table->foreignUuid('part_id')->constrained('parts');
             $table->unsignedInteger('quantity');
             $table->decimal('unit_price', 12, 2);
+            $table->decimal('unit_cost', 12, 2)->default(0);
             $table->decimal('total', 12, 2);
         });
     }

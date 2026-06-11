@@ -218,13 +218,12 @@ class CapitalService
      */
     public function financingSnapshot(float $capitalAmount, ?string $branchId = null): array
     {
-        $stockQuery = Stock::query()
-            ->join('parts', 'parts.id', '=', 'stock.part_id');
+        $stockQuery = Stock::query();
         if ($branchId !== null) {
-            $stockQuery->where('stock.branch_id', $branchId);
+            $stockQuery->where('branch_id', $branchId);
         }
         $stockAtCost = (float) ($stockQuery
-            ->selectRaw('SUM(stock.quantity * parts.cost_price) as v')
+            ->selectRaw('SUM(quantity * average_cost) as v')
             ->value('v') ?? 0);
 
         $receivables = $this->scopedReceivablesTotal($branchId);
