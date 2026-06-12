@@ -107,4 +107,29 @@ class CustomerBranchFilterTest extends TestCase
 
         $this->assertSame($branch->id, $create->json('branch_id'));
     }
+
+    public function test_admin_create_without_branch_on_post_still_appears_in_list(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $branch = Branch::query()->firstOrFail();
+
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $create = $this->withToken($token)->postJson('/api/v1/customers', [
+            'name' => 'Admin No Branch On Post',
+            'type' => 'cash',
+            'phone' => '01100000004',
+        ])->assertCreated();
+
+        $customerId = (string) $create->json('id');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/customers?branch_id='.$branch->id.'&per_page=50')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $customerId);
+    }
 }

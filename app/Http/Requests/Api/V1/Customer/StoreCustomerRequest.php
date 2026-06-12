@@ -31,5 +31,9 @@ class StoreCustomerRequest extends ApiFormRequest
                 'outstanding_balance' => 0,
             ]);
         }
+
+        if (! $this->has('is_active')) {
+            $this->merge(['is_active' => true]);
+        }
     }
 }

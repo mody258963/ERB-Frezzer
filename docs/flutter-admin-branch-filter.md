@@ -119,7 +119,7 @@ If branch A and branch B must have **different part codes** or **different suppl
 | Purchases / installments | ✅ | `purchase_orders.branch_id` |
 | Returns | ✅ | `returns.branch_id` |
 | Users list | ✅ | `users.branch_id` |
-| Customers list | ✅ | Customers registered at or with invoices in that branch |
+| Customers list | — | Shared catalog; all customers returned (`branch_id` stored when known; receivables stay branch-scoped) |
 | Business capital (`capital_amount`) | ✅ | Stored per branch (`branches.capital_amount`); dashboard sums all branches when no filter |
 | Owner cash-out profit limit | ✅ | Profit & withdrawals for selected branch |
 
@@ -196,7 +196,7 @@ Show a chip when filtered: `Branch: Main Shop` with clear (×) to reset to all b
 1. **Admin without `branch_id`** = aggregated numbers across all branches — do not mix with branch-filtered screens in the same view without clearing state.
 2. **Non-admin** must not send a different `branch_id` — API ignores it; do not show the dropdown.
 3. After creating an invoice/PO, pass the same `branch_id` filter when refreshing lists.
-4. **Customers** created while a branch filter is active are tagged with that `branch_id` and appear in the branch list immediately (even before their first invoice).
+4. **Customers** list is not branch-filtered — new customers appear immediately even if `branch_id` was not sent on POST. Receivables and invoices remain branch-scoped.
 
 ---
 
