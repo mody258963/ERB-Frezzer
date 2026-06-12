@@ -18,7 +18,10 @@ return new class extends Migration
             $table->decimal('outstanding_balance', 12, 2)->default(0);
             $table->timestamp('last_settled_at')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->timestamps();
+
+            $table->index('branch_id');
         });
 
         Schema::create('suppliers', function (Blueprint $table) {

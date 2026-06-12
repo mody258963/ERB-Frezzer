@@ -14,7 +14,7 @@ class Customer extends Model
 
     protected $fillable = [
         'name', 'type', 'phone', 'address', 'credit_limit', 'outstanding_balance',
-        'last_settled_at', 'linked_supplier_id', 'is_active',
+        'last_settled_at', 'linked_supplier_id', 'is_active', 'branch_id',
     ];
 
     protected function casts(): array
@@ -26,6 +26,11 @@ class Customer extends Model
             'last_settled_at' => 'datetime',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function linkedSupplier(): BelongsTo

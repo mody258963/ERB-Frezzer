@@ -30,6 +30,7 @@ final class CustomerTransformer
             ] : null,
             'last_settled_at' => $customer->last_settled_at?->toISOString(),
             'is_active' => $customer->is_active,
+            'branch_id' => $customer->branch_id,
             'created_at' => $customer->created_at?->toISOString(),
             'updated_at' => $customer->updated_at?->toISOString(),
         ];
