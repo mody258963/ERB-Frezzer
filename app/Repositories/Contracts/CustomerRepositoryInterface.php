@@ -15,7 +15,7 @@ interface CustomerRepositoryInterface
 
     public function findOrFail(string $id): Customer;
 
-    public function create(array $data): Customer;
+    public function create(array $data, ?User $user = null): Customer;
 
     public function update(Customer $customer, array $data): Customer;
 

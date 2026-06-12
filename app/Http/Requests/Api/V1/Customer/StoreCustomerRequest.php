@@ -15,6 +15,7 @@ class StoreCustomerRequest extends ApiFormRequest
             'address' => ['nullable', 'string'],
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'linked_supplier_id' => ['nullable', 'uuid', 'exists:suppliers,id'],
+            'branch_id' => ['nullable', 'uuid', 'exists:branches,id'],
         ];
     }
 

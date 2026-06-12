@@ -48,7 +48,7 @@ class CustomerController extends Controller
 
     public function store(StoreCustomerRequest $request): JsonResponse
     {
-        return (new CustomerResource($this->customers->create($request->validated())))
+        return (new CustomerResource($this->customers->create($request->validated(), $request->user())))
             ->response()
             ->setStatusCode(201);
     }

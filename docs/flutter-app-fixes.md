@@ -362,10 +362,115 @@ If you see **404** on `auth/login`, the request is hitting the **wrong project**
 - [ ] POS cart — optional `unit_price` on invoice lines + offline sync  
 - [ ] Part image — `POST` multipart `image`  
 - [ ] `baseUrl` ends with `/api/v1` (no double `/api/v1/api/v1`)
+- [ ] Branch dropdown — `value` only when id exists in loaded branches (see §11)
+- [ ] Customer create POST includes `branch_id` (query or body) when admin branch filter is active
 
 ---
 
-## 11. Quick reference — HTTP methods
+## 11. Branch dropdown — red screen after create customer
+
+### Problem
+
+```
+DropdownButton's value: 019eb698-be73-71c3-8017-e8edae5ae709
+Either zero or 2 or more DropdownMenuItems were detected with the same value
+```
+
+Happens when `DropdownButton.value` is set to a `branch_id` **before** `GET /branches/active` finishes, or when that id is **not** in the items list (e.g. persisted filter, customer `branch_id` from API, or user `branch_id`).
+
+The API now returns `branch_id` on customers — do **not** bind that field directly to a branch `DropdownButton` unless the branch list is already loaded.
+
+### Fix
+
+**1. Only set `value` when it exists in `items`:**
+
+```dart
+String? _safeDropdownValue(String? value, List<Branch> branches) {
+  if (value == null) return null;
+  final matches = branches.where((b) => b.id == value).length;
+  return matches == 1 ? value : null;
+}
+```
+
+```dart
+DropdownButton<String?>(
+  value: _safeDropdownValue(selectedBranchId, branches),
+  items: [
+    const DropdownMenuItem(value: null, child: Text('All branches')),
+    ...branches.map(
+      (b) => DropdownMenuItem(value: b.id, child: Text(b.name)),
+    ),
+  ],
+  onChanged: (id) => setState(() => selectedBranchId = id),
+)
+```
+
+**2. Load branches first, then restore saved filter:**
+
+```dart
+@override
+void initState() {
+  super.initState();
+  _loadBranches().then((list) {
+    final saved = prefs.getString('selected_branch_id');
+    setState(() {
+      branches = list;
+      selectedBranchId = _safeDropdownValue(saved, list);
+    });
+  });
+}
+```
+
+**3. Customer create — pass active branch on POST**
+
+When admin has a branch filter selected, include the same branch on **POST** (not only on GET refresh):
+
+```dart
+// Option A: query param (matches GET lists)
+await dio.post(
+  '/customers',
+  queryParameters: branchQuery(),
+  data: {'name': name, 'type': type, 'phone': phone, 'address': address},
+);
+
+// Option B: JSON body
+await dio.post('/customers', data: {
+  'name': name,
+  'type': type,
+  'phone': phone,
+  'address': address,
+  if (selectedBranchId != null) 'branch_id': selectedBranchId,
+});
+```
+
+If POST has no branch, response is `"branch_id": null` and the customer **will not appear** in branch-filtered lists until they have an invoice there.
+
+**4. Customer create/edit — do not show branch picker**
+
+The server sets `branch_id` from the active branch filter (or the user's assigned branch). Send `?branch_id=` on the POST if admin has a filter; **do not** add a branch dropdown on the customer form.
+
+**5. Non-admin users**
+
+Hide the branch dropdown entirely. Use `user.branch_id` in API query params only — never as `DropdownButton.value` without items.
+
+**6. Avoid duplicate items**
+
+When building `DropdownMenuItem`s, dedupe by id:
+
+```dart
+final unique = {for (final b in branches) b.id: b}.values;
+```
+
+### Checklist
+
+- [ ] Branch dropdown `value` is null until `GET /branches/active` completes  
+- [ ] Saved `selectedBranchId` validated against loaded branches  
+- [ ] Customer screen has **no** branch dropdown (server assigns `branch_id`)  
+- [ ] No duplicate branch ids in dropdown items  
+
+---
+
+## 12. Quick reference — HTTP methods
 
 | Action | Method | Path |
 |--------|--------|------|

@@ -46,9 +46,12 @@ class CustomerRepository extends BaseRepository implements CustomerRepositoryInt
         return $this->findByIdOrFail($id);
     }
 
-    public function create(array $data): Customer
+    public function create(array $data, ?User $user = null): Customer
     {
-        if (($branchId = BranchVisibility::activeBranchId()) !== null) {
+        $user = $user ?? request()?->user();
+        unset($data['branch_id']);
+
+        if (($branchId = BranchVisibility::activeBranchId($user)) !== null) {
             $data['branch_id'] = $branchId;
         }
 

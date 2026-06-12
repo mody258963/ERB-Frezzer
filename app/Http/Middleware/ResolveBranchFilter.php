@@ -17,7 +17,10 @@ class ResolveBranchFilter
         if ($request->user() !== null) {
             $request->attributes->set(
                 'resolved_branch_id',
-                BranchVisibility::resolveBranchId($request->user(), $request->query('branch_id')),
+                BranchVisibility::resolveBranchId(
+                    $request->user(),
+                    BranchVisibility::requestedBranchId($request),
+                ),
             );
         }
 

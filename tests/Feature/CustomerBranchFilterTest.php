@@ -60,4 +60,51 @@ class CustomerBranchFilterTest extends TestCase
             ->getJson('/api/v1/customers?per_page=500')
             ->assertOk();
     }
+
+    public function test_admin_create_customer_with_branch_in_body_tags_branch(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $branch = Branch::query()->firstOrFail();
+
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $create = $this->withToken($token)->postJson('/api/v1/customers', [
+            'name' => 'Admin Body Branch Customer',
+            'type' => 'cash',
+            'phone' => '01100000002',
+            'branch_id' => $branch->id,
+        ])->assertCreated();
+
+        $customerId = (string) $create->json('id');
+        $this->assertSame($branch->id, $create->json('branch_id'));
+
+        $this->withToken($token)
+            ->getJson('/api/v1/customers?branch_id='.$branch->id.'&per_page=50')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $customerId);
+    }
+
+    public function test_admin_create_customer_with_branch_query_param_tags_branch(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $branch = Branch::query()->firstOrFail();
+
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $create = $this->withToken($token)->postJson('/api/v1/customers?branch_id='.$branch->id, [
+            'name' => 'Admin Query Branch Customer',
+            'type' => 'cash',
+            'phone' => '01100000003',
+        ])->assertCreated();
+
+        $this->assertSame($branch->id, $create->json('branch_id'));
+    }
 }

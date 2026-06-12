@@ -15,6 +15,24 @@ class BranchVisibility
      * - Admin + ?branch_id=: filter to that branch.
      * - Admin without param: null (all branches).
      */
+    /**
+     * Branch filter sent by the client: query param, optional header, or JSON body.
+     */
+    public static function requestedBranchId(?\Illuminate\Http\Request $request = null): ?string
+    {
+        $request = $request ?? request();
+
+        if ($request === null) {
+            return null;
+        }
+
+        $value = $request->query('branch_id')
+            ?? $request->header('X-Branch-Id')
+            ?? $request->input('branch_id');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
     public static function activeBranchId(?User $user = null): ?string
     {
         $request = request();
@@ -25,7 +43,7 @@ class BranchVisibility
 
         $user = $user ?? $request?->user();
 
-        return self::resolveBranchId($user, $request?->query('branch_id'));
+        return self::resolveBranchId($user, self::requestedBranchId($request));
     }
 
     /**
