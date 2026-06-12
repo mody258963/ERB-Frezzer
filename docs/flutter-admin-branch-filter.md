@@ -3,7 +3,7 @@
 **Audience:** Flutter Windows (`erd_rezzer`) developers  
 **Date:** June 2026
 
-When an **admin** selects a branch from a dropdown, the entire app should scope data to that branch: warehouse stock, users, customers (with activity in that branch), invoices, purchases, dashboard numbers, reports, and owner cash-out profit.
+When an **admin** selects a branch from a dropdown, the entire app should scope data to that branch: warehouse stock, users, invoices, purchases, dashboard numbers, reports, and owner cash-out profit. **Customers** remain a shared catalog (see below).
 
 Non-admin users (`manager`, `salesperson`, `warehouse`) **never** see the dropdown — they are always locked to their assigned `user.branch_id`.
 
@@ -119,7 +119,7 @@ If branch A and branch B must have **different part codes** or **different suppl
 | Purchases / installments | ✅ | `purchase_orders.branch_id` |
 | Returns | ✅ | `returns.branch_id` |
 | Users list | ✅ | `users.branch_id` |
-| Customers list | ✅ | Customers with invoices in that branch |
+| Customers list | — | Shared catalog; `branch_id` does not filter the list (branch scoping applies to invoices/receivables) |
 | Business capital (`capital_amount`) | ✅ | Stored per branch (`branches.capital_amount`); dashboard sums all branches when no filter |
 | Owner cash-out profit limit | ✅ | Profit & withdrawals for selected branch |
 
@@ -196,7 +196,7 @@ Show a chip when filtered: `Branch: Main Shop` with clear (×) to reset to all b
 1. **Admin without `branch_id`** = aggregated numbers across all branches — do not mix with branch-filtered screens in the same view without clearing state.
 2. **Non-admin** must not send a different `branch_id` — API ignores it; do not show the dropdown.
 3. After creating an invoice/PO, pass the same `branch_id` filter when refreshing lists.
-4. **Customers** may still appear globally in search if they have no invoices in the selected branch — list endpoint filters by branch activity.
+4. **Customers** are a shared catalog — newly created customers appear in the list immediately. Receivables and invoice history remain branch-scoped.
 
 ---
 

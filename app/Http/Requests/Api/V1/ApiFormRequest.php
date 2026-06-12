@@ -11,10 +11,10 @@ abstract class ApiFormRequest extends FormRequest
         return true;
     }
 
-    protected function perPageRules(): array
+    protected function perPageRules(int $max = 100): array
     {
         return [
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:'.$max],
         ];
     }
 

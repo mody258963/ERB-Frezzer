@@ -8,7 +8,7 @@ class IndexCustomerRequest extends ApiFormRequest
 {
     public function rules(): array
     {
-        return array_merge($this->perPageRules(), [
+        return array_merge($this->perPageRules(max: 500), [
             'type' => ['nullable', 'in:credit,cash'],
             'search' => ['nullable', 'string'],
         ]);

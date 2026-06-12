@@ -1,0 +1,63 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\UserRole;
+use App\Models\Branch;
+use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class CustomerBranchFilterTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_newly_created_customer_appears_in_branch_filtered_list(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $branch = Branch::query()->firstOrFail();
+
+        User::query()->create([
+            'name' => 'Sales',
+            'email' => 'sales-customer@example.com',
+            'password' => 'password123',
+            'role' => UserRole::Salesperson,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'sales-customer@example.com',
+            'password' => 'password123',
+        ])->json('token');
+
+        $create = $this->withToken($token)->postJson('/api/v1/customers', [
+            'name' => 'New Branch Customer',
+            'type' => 'cash',
+            'phone' => '01100000001',
+        ])->assertCreated();
+
+        $customerId = (string) $create->json('id');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/customers?branch_id='.$branch->id.'&per_page=50')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $customerId);
+    }
+
+    public function test_customer_index_allows_catalog_sync_page_size(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/customers?per_page=500')
+            ->assertOk();
+    }
+}
