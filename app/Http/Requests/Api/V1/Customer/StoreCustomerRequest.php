@@ -35,7 +35,6 @@ class StoreCustomerRequest extends ApiFormRequest
             $this->merge([
                 'credit_limit' => 0,
                 'outstanding_balance' => 0,
-                'settlement_cycle' => null,
             ]);
         }
 

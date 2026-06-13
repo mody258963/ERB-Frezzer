@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\SaturdaySettlement;
 use App\Models\User;
 use App\Repositories\Contracts\SaturdaySettlementRepositoryInterface;
+use App\Support\BranchVisibility;
 use App\Support\CustomerSettlementSchedule;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -19,8 +20,14 @@ class SaturdaySettlementRepository extends BaseRepository implements SaturdaySet
 
     public function paginate(?User $user, int $perPage = 25): LengthAwarePaginator
     {
+        $branchId = BranchVisibility::activeBranchId($user);
+
         return $this->newQuery()
             ->with(['customer', 'creator'])
+            ->when($branchId, fn ($q) => $q->whereHas(
+                'customer',
+                fn ($c) => $c->where('branch_id', $branchId),
+            ))
             ->latest('created_at')
             ->paginate($perPage);
     }
@@ -38,9 +45,12 @@ class SaturdaySettlementRepository extends BaseRepository implements SaturdaySet
 
     public function upcomingTotals(?string $cycle = null): Collection
     {
+        $branchId = BranchVisibility::activeBranchId();
+
         return Customer::query()
             ->where('type', 'credit')
             ->where('is_active', true)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->when($cycle, fn ($q) => $q->where('settlement_cycle', $cycle))
             ->get()
             ->map(function (Customer $customer) {

@@ -130,8 +130,11 @@ class ReportQueryService
 
     public function supplierDebtAging(): array
     {
+        $branchId = BranchVisibility::activeBranchId();
+
         return DB::table('suppliers')
             ->select('id', 'name', 'total_debt', 'updated_at')
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->where('total_debt', '>', 0)
             ->get()
             ->all();

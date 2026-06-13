@@ -17,23 +17,21 @@ sequenceDiagram
   API-->>UI: categories list
   UI->>API: GET /part-units
   API-->>UI: unit enum options
-  UI->>API: POST /parts
-  API-->>UI: 201 + part id
-  opt User picked a photo
-    UI->>API: POST /parts/{id}/image (multipart)
-    API-->>UI: 200 + image_url
-  end
-  opt Add opening stock
-    UI->>API: POST /inventory/adjust
-    API-->>UI: 200 OK
+  UI->>API: POST /parts?branch_id={branch}
+  API-->>UI: 201 + part id + branch_id
+  opt Opening quantity
+    Note over API: stock row created automatically
   end
 ```
 
 1. Open **Parts** → **Add part** (hide screen for `salesperson` / `warehouse`).
-2. Load dropdown data (categories + units).
-3. User fills the form and taps **Save**.
-4. Call `POST /parts`.
-5. Optional: **Add stock** for a branch (`POST /inventory/adjust`) — new parts start with **0** stock.
+2. Ensure a **branch is selected** (admin dropdown or user’s assigned branch).
+3. Load dropdown data (categories + units).
+4. User fills the form and taps **Save**.
+5. Call `POST /parts` **with the same `branch_id` you use on GET** (query or JSON body).
+6. Server creates the part **and** a warehouse (`stock`) row for that branch.
+7. Optional: set **`initial_quantity`** on POST for opening stock (or `POST /inventory/adjust` later).
+8. Optional: `POST /parts/{id}/image` for photo upload.
 
 ---
 
@@ -100,7 +98,7 @@ Allowed values are fixed in the API enum — do not hardcode only in the app; al
 
 | Field | API key | Required | Notes |
 |-------|---------|----------|--------|
-| Code | `code` | Yes | Unique, max 64 chars, e.g. `BRK-001` |
+| Code | `code` | Yes | Unique **per branch**, max 64 chars |
 | Name | `name` | Yes | Display name |
 | Category | `category_key` | Yes* | From dropdown (`compressor`, `seals`, …) |
 | Category (alt) | `category_id` | Yes* | UUID instead of `category_key` |
@@ -108,7 +106,9 @@ Allowed values are fixed in the API enum — do not hardcode only in the app; al
 | Sell price | `sell_price` | Yes | Number ≥ 0 |
 | Cost price | `cost_price` | Yes | Number ≥ 0 |
 | Min stock | `min_stock` | Yes | Integer ≥ 0 |
+| Opening qty | `initial_quantity` | No | Opening warehouse stock (default 0) |
 | Active | `is_active` | No | Default `true` |
+| Branch | `branch_id` | **Yes** | Query param, JSON body, or `X-Branch-Id` header |
 
 \* One of `category_key` or `category_id` is required.
 
@@ -125,20 +125,26 @@ Allowed values are fixed in the API enum — do not hardcode only in the app; al
 │  Sell price *  [ 150.00____________ ]  │
 │  Cost price *  [  80.00____________ ]  │
 │  Min stock *   [ 5_________________ ]  │
+│  Opening qty   [ 0________________ ]  │
 │  Active        [x]                      │
+│  Branch        Main Branch (from filter)│
 ├─────────────────────────────────────────┤
 │  [ Cancel ]              [ Save part ]  │
 └─────────────────────────────────────────┘
 ```
 
-After save → dialog: **Add stock now?** → optional stock screen.
+After save → refresh **Parts** and **Inventory** for the active branch.
 
 ---
 
 ## 5. Create the part (API)
 
+> **Critical:** `GET /parts?branch_id=…` alone is not enough. **POST must include the same branch** or you get HTTP **422** `branch_id is required`.
+
+### Correct request
+
 ```http
-POST /api/v1/parts
+POST /api/v1/parts?branch_id=019ebecf-cc58-71e9-a7ff-f262147240b6
 Content-Type: application/json
 Accept: application/json
 Authorization: Bearer <token>
@@ -151,9 +157,88 @@ Authorization: Bearer <token>
   "sell_price": 150,
   "cost_price": 80,
   "min_stock": 5,
-  "is_active": true
+  "is_active": true,
+  "initial_quantity": 10
 }
 ```
+
+Alternative: put `"branch_id": "019ebecf-…"` in the JSON body instead of the query string.
+
+### Flutter fix (`part_repository.dart`)
+
+Your logs show the bug — branch on GET only:
+
+```
+GET  /parts?branch_id=019ebecf-…     ✅
+POST /parts  (no branch_id)          ❌ 422
+```
+
+**Before (wrong):**
+
+```dart
+Future<Part> create(Map<String, dynamic> data) async {
+  final res = await _dio.post('/parts', data: data);
+  return Part.fromJson(res.data as Map<String, dynamic>);
+}
+```
+
+**After (correct):**
+
+```dart
+Future<Part> create(
+  Map<String, dynamic> data, {
+  Map<String, dynamic>? branchQuery,
+}) async {
+  final res = await _dio.post(
+    '/parts',
+    queryParameters: branchQuery,
+    data: {
+      ...data,
+      if (branchQuery?['branch_id'] != null)
+        'branch_id': branchQuery!['branch_id'],
+    },
+  );
+  return Part.fromJson(res.data as Map<String, dynamic>);
+}
+```
+
+Call from `parts_screen.dart`:
+
+```dart
+await partRepo.create(
+  {
+    'code': code,
+    'name': name,
+    'category_key': categoryKey,
+    'unit': unit,
+    'sell_price': sellPrice,
+    'cost_price': costPrice,
+    'min_stock': minStock,
+    'is_active': true,
+    if (openingQty > 0) 'initial_quantity': openingQty,
+  },
+  branchQuery: branchQuery(), // same helper as GET /parts and GET /customers
+);
+```
+
+Reuse the same `branchQuery()` helper from [flutter-admin-branch-filter.md](./flutter-admin-branch-filter.md):
+
+```dart
+Map<String, dynamic> branchQuery() => {
+  if (selectedBranchId != null) 'branch_id': selectedBranchId,
+};
+```
+
+For **non-admin** users, `selectedBranchId` should be `user.branch_id` from login — parts still require a branch on POST.
+
+### Wrong request (causes 422)
+
+```http
+POST /api/v1/parts
+{ "code": "1351", "name": "…", … }
+```
+
+No `branch_id` in query, body, or header → **422**.
 
 ### Success — `201 Created`
 
@@ -171,6 +256,7 @@ Authorization: Bearer <token>
   "cost_price": 80,
   "min_stock": 5,
   "is_active": true,
+  "branch_id": "019ebecf-cc58-71e9-a7ff-f262147240b6",
   "image_url": null,
   "created_at": "2026-05-20T10:00:00.000000Z",
   "updated_at": "2026-05-20T10:00:00.000000Z"
@@ -186,7 +272,8 @@ Save `id` for stock adjust, optional image upload, and navigation to part detail
 | `401` | Token invalid/expired | Go to login |
 | `403` | Not admin/manager | Show “No permission” |
 | `422` | Validation failed | Show field errors from `errors` object |
-| `409` / `422` | Duplicate `code` | Highlight code field |
+| `422` | Missing `branch_id` | Pass branch on POST (see above) |
+| `422` / `409` | Duplicate `code` in **this branch** | Highlight code field |
 
 Example `422` (invalid unit):
 
@@ -206,6 +293,17 @@ Example `422` (duplicate code):
   "message": "The code has already been taken.",
   "errors": {
     "code": ["The code has already been taken."]
+  }
+}
+```
+
+Example `422` (missing branch — matches production logs):
+
+```json
+{
+  "message": "branch_id is required. Send ?branch_id= on POST, include branch_id in JSON, or use the X-Branch-Id header.",
+  "errors": {
+    "branch_id": ["branch_id is required. Send ?branch_id= on POST, include branch_id in JSON, or use the X-Branch-Id header."]
   }
 }
 ```

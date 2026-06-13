@@ -108,7 +108,7 @@ class CustomerBranchFilterTest extends TestCase
         $this->assertSame($branch->id, $create->json('branch_id'));
     }
 
-    public function test_admin_create_without_branch_on_post_still_appears_in_list(): void
+    public function test_admin_create_without_branch_on_post_visible_only_without_branch_filter(): void
     {
         $this->seed(DatabaseSeeder::class);
 
@@ -130,6 +130,11 @@ class CustomerBranchFilterTest extends TestCase
         $this->withToken($token)
             ->getJson('/api/v1/customers?branch_id='.$branch->id.'&per_page=50')
             ->assertOk()
-            ->assertJsonPath('data.0.id', $customerId);
+            ->assertJsonMissing(['id' => $customerId]);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/customers?per_page=50')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $customerId]);
     }
 }

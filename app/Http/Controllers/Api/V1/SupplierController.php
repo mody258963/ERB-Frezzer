@@ -33,7 +33,7 @@ class SupplierController extends Controller
 
     public function store(StoreSupplierRequest $request): JsonResponse
     {
-        return (new SupplierResource($this->suppliers->create($request->validated())))
+        return (new SupplierResource($this->suppliers->create($request->validated(), $request->user())))
             ->response()
             ->setStatusCode(201);
     }

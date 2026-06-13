@@ -61,7 +61,9 @@ class PartRepository extends BaseRepository implements PartRepositoryInterface
 
         $branchId = BranchVisibility::activeBranchId($user);
         if ($branchId === null) {
-            throw new \InvalidArgumentException('branch_id is required to create a part.');
+            throw new \InvalidArgumentException(
+                'branch_id is required to create a part. Send ?branch_id= on POST, include branch_id in JSON, or use the X-Branch-Id header.',
+            );
         }
 
         $data['branch_id'] = $branchId;

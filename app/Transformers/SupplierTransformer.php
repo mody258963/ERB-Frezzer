@@ -18,6 +18,7 @@ final class SupplierTransformer
             'phone' => $supplier->phone,
             'address' => $supplier->address,
             'total_debt' => (float) $supplier->total_debt,
+            'branch_id' => $supplier->branch_id,
             'linked_customer_id' => $supplier->relationLoaded('linkedCustomer') && $supplier->linkedCustomer
                 ? $supplier->linkedCustomer->id
                 : null,

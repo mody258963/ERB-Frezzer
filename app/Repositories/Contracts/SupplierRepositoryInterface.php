@@ -12,7 +12,7 @@ interface SupplierRepositoryInterface
 
     public function find(string $id): ?Supplier;
 
-    public function create(array $data): Supplier;
+    public function create(array $data, ?User $user = null): Supplier;
 
     public function update(Supplier $supplier, array $data): Supplier;
 

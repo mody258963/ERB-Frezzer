@@ -101,9 +101,17 @@ class Part {
 ### Add part screen
 
 1. Require active branch (admin dropdown or user’s assigned branch).
-2. POST with `queryParameters: branchQuery()`.
-3. Optional field **Opening quantity** → `initial_quantity`.
+2. **POST with `branchQuery()`** — same as GET lists (see [flutter-add-part.md](./flutter-add-part.md) §5).
+3. Optional field **Opening quantity** → `initial_quantity` (creates warehouse stock in one call).
 4. After save, refresh **Parts** and **Inventory** for that branch.
+
+### `part_repository.dart` (required fix)
+
+```dart
+await dio.post('/parts', queryParameters: branchQuery(), data: payload);
+```
+
+Without `branch_id` on POST → **422** and empty parts list after sync.
 
 ### POS / sales
 

@@ -65,7 +65,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
             'name' => 'Smoke Warehouse Renamed',
         ])->assertOk();
 
-        $primaryPart = $auth()->postJson('/api/v1/parts', [
+        $primaryPart = $auth()->postJson('/api/v1/parts?branch_id='.$mainBranchId, [
             'code' => 'SMK-P1',
             'name' => 'Smoke primary part',
             'category_key' => 'compressor',
@@ -78,7 +78,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $primaryPart->assertCreated();
         $partId = (string) $primaryPart->json('id');
 
-        $discardPart = $auth()->postJson('/api/v1/parts', [
+        $discardPart = $auth()->postJson('/api/v1/parts?branch_id='.$mainBranchId, [
             'code' => 'SMK-DEL',
             'name' => 'Delete-only part',
             'category_key' => 'seals',
@@ -222,7 +222,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
         $auth()->patchJson("/api/v1/transfers/{$transferCancelId}/cancel")->assertOk();
         $auth()->patchJson("/api/v1/transfers/{$transferId}/complete")->assertOk();
 
-        $supplierResp = $auth()->postJson('/api/v1/suppliers', [
+        $supplierResp = $auth()->postJson('/api/v1/suppliers?branch_id='.$mainBranchId, [
             'name' => 'Smoke Supplier',
             'contact_person' => null,
             'phone' => null,
@@ -254,7 +254,7 @@ class ApiV1EndpointsSmokeTest extends TestCase
 
         $purchaseCancelResp = $auth()->postJson('/api/v1/purchases', [
             'supplier_id' => $supplierId,
-            'branch_id' => $warehouseBranchId,
+            'branch_id' => $mainBranchId,
             'payment_type' => 'immediate',
             'items' => [
                 ['part_id' => $partId, 'quantity' => 1, 'unit_cost' => 5],

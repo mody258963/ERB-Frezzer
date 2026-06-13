@@ -33,7 +33,10 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->decimal('total_debt', 12, 2)->default(0);
             $table->boolean('is_active')->default(true);
+            $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->timestamps();
+
+            $table->index('branch_id');
         });
 
         Schema::table('customers', function (Blueprint $table) {

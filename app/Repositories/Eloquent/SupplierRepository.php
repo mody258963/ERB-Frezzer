@@ -22,10 +22,7 @@ class SupplierRepository extends BaseRepository implements SupplierRepositoryInt
         $branchId = BranchVisibility::activeBranchId($user);
 
         return $this->newQuery()
-            ->when($branchId, fn ($q) => $q->whereHas(
-                'purchaseOrders',
-                fn ($po) => $po->where('branch_id', $branchId)
-            ))
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->latest()
             ->paginate($perPage);
     }
@@ -35,8 +32,20 @@ class SupplierRepository extends BaseRepository implements SupplierRepositoryInt
         return $this->findById($id);
     }
 
-    public function create(array $data): Supplier
+    public function create(array $data, ?User $user = null): Supplier
     {
+        $user = $user ?? request()?->user();
+        unset($data['branch_id']);
+
+        $branchId = BranchVisibility::activeBranchId($user);
+        if ($branchId === null) {
+            throw new \InvalidArgumentException(
+                'branch_id is required to create a supplier. Send ?branch_id= on POST, include branch_id in JSON, or use the X-Branch-Id header.',
+            );
+        }
+
+        $data['branch_id'] = $branchId;
+
         /** @var Supplier */
         return $this->createRecord($data);
     }

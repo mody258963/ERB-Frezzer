@@ -129,4 +129,26 @@ class PartBranchWarehouseTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/parts?branch_id='.$branchA->id, $payload)->assertCreated();
         $this->withToken($token)->postJson('/api/v1/parts?branch_id='.$branchB->id, $payload)->assertCreated();
     }
+
+    public function test_create_part_without_branch_returns_validation_error(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(PartCategorySeeder::class);
+
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $this->withToken($token)->postJson('/api/v1/parts', [
+            'code' => 'NO-BRANCH',
+            'name' => 'Missing Branch',
+            'category_key' => 'compressor',
+            'unit' => 'pc',
+            'sell_price' => 100,
+            'cost_price' => 50,
+            'min_stock' => 0,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['branch_id']);
+    }
 }

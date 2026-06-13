@@ -2,7 +2,7 @@
 
 Guide for the **erd_rezzer** / FrostParts Windows client. The API is **ERB-Frezzer** (`https://api.tppower.shop/api/v1` or your server).
 
-Related: [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md) (dashboard profit, financial reports, admin users/branches), [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [flutter-windows-pos-offline-guide.md](./flutter-windows-pos-offline-guide.md).
+Related: [flutter-per-branch-isolation.md](./flutter-per-branch-isolation.md) (master guide — manager vs admin, full module map), [flutter-branch-switching-guide.md](./flutter-branch-switching-guide.md) (branch switching — parts, warehouse, customers, suppliers), [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md) (dashboard profit, financial reports, admin users/branches), [flutter-windows-recent-updates.md](./flutter-windows-recent-updates.md), [flutter-windows-pos-offline-guide.md](./flutter-windows-pos-offline-guide.md).
 
 ---
 
@@ -364,6 +364,56 @@ If you see **404** on `auth/login`, the request is hitting the **wrong project**
 - [ ] `baseUrl` ends with `/api/v1` (no double `/api/v1/api/v1`)
 - [ ] Branch dropdown — `value` only when id exists in loaded branches (see §11)
 - [ ] Customer create POST includes `branch_id` (query or body) when admin branch filter is active
+- [ ] Part create POST includes `branch_id` via `branchQuery()` — see §12
+- [ ] Supplier create POST includes `branch_id` via `branchQuery()` — see §13
+
+---
+
+## 12. Create part — HTTP 422 branch_id required
+
+### Problem
+
+```
+POST /parts  (body only, no branch_id)
+422 branch_id is required to create a part.
+```
+
+Meanwhile `GET /parts?branch_id=…` works. Parts list stays empty after catalog sync.
+
+### Fix
+
+In `lib/data/repositories/part_repository.dart`:
+
+```dart
+final res = await _dio.post(
+  '/parts',
+  queryParameters: branchQuery(),
+  data: {
+    ...payload,
+    if (selectedBranchId != null) 'branch_id': selectedBranchId,
+  },
+);
+```
+
+Pass `branchQuery()` from `parts_screen.dart` when calling `PartRepository.create`.
+
+Also send optional `initial_quantity` for opening warehouse stock.
+
+Full guide: [flutter-add-part.md](./flutter-add-part.md) · [flutter-parts-branch-warehouse.md](./flutter-parts-branch-warehouse.md)
+
+---
+
+## 13. Create supplier — HTTP 422 branch_id required
+
+Same pattern as parts (§12). **GET** `/suppliers?branch_id=…` works but **POST** without branch fails.
+
+```dart
+await dio.post('/suppliers', queryParameters: branchQuery(), data: payload);
+```
+
+Add `branchId` to the supplier model from `json['branch_id']`.
+
+Full guide: [flutter-branch-switching-guide.md](./flutter-branch-switching-guide.md) §4.4
 
 ---
 
@@ -443,7 +493,7 @@ await dio.post('/customers', data: {
 });
 ```
 
-If POST has no branch, response is `"branch_id": null` and the customer **will not appear** in branch-filtered lists until they have an invoice there.
+If POST has no branch, response is `"branch_id": null`. Customer appears only in admin **unfiltered** list (`GET /customers` without `branch_id`), not in branch-filtered lists. Always send branch on POST.
 
 **4. Customer create/edit — do not show branch picker**
 

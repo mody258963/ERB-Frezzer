@@ -38,4 +38,23 @@ class StorePartRequest extends ApiFormRequest
             'initial_quantity' => ['nullable', 'integer', 'min:0'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        if (($branchId = $this->resolvedPartBranchId()) !== null) {
+            $this->merge(['branch_id' => $branchId]);
+        }
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($this->resolvedPartBranchId() === null) {
+                $validator->errors()->add(
+                    'branch_id',
+                    'branch_id is required. Send ?branch_id= on POST, include branch_id in JSON, or use the X-Branch-Id header.',
+                );
+            }
+        });
+    }
 }

@@ -3,7 +3,13 @@
 **Audience:** Flutter Windows (`erd_rezzer`) developers  
 **Date:** June 2026
 
-When an **admin** selects a branch from a dropdown, the entire app should scope data to that branch: warehouse stock, users, customers, invoices, purchases, dashboard numbers, reports, and owner cash-out profit.
+> **Master guide (manager locked to branch, full module map):**  
+> See [flutter-per-branch-isolation.md](./flutter-per-branch-isolation.md)
+
+> **Branch switching (GET vs POST, Dio patterns):**  
+> See [flutter-branch-switching-guide.md](./flutter-branch-switching-guide.md)
+
+When an **admin** selects a branch from a dropdown, the entire app should scope data to that branch:
 
 Non-admin users (`manager`, `salesperson`, `warehouse`) **never** see the dropdown — they are always locked to their assigned `user.branch_id`.
 
@@ -86,7 +92,7 @@ When admin picks a branch, **inventory, sales, purchases, payables, and profit**
 |-------|------------------|---------|
 | `parts` | **Yes** | Each part belongs to **one branch** (`parts.branch_id`). Same `code` can exist in two branches as separate rows. |
 | `stock` | **Yes** (with `part_id`) | **Warehouse quantity** for that part in that branch. Created automatically when a part is created. |
-| `suppliers` | **No** | Shared supplier name; branch activity is on purchase orders |
+| `suppliers` | **Yes** | Each supplier belongs to **one branch** (`suppliers.branch_id`). |
 
 So: **part definition** and **warehouse row** are both tied to a branch. Branch A and Branch B each have their own part catalogs and stock levels.
 
@@ -98,7 +104,7 @@ With `?branch_id=` active:
 |----------|----------------|
 | `GET /parts` | Parts where `parts.branch_id` = that branch |
 | `GET /inventory` | Stock rows for that branch (`stock.branch_id`) |
-| `GET /suppliers` | Suppliers with at least one **purchase order** in that branch |
+| `GET /suppliers` | Suppliers where `suppliers.branch_id` = that branch |
 | `GET /suppliers/{id}/debt` | POs + installments for that branch only |
 
 ### Create part (must include branch)
@@ -123,6 +129,22 @@ POST /api/v1/parts?branch_id={uuid}
 
 See [flutter-parts-branch-warehouse.md](./flutter-parts-branch-warehouse.md).
 
+### Create supplier (must include branch)
+
+```http
+POST /api/v1/suppliers?branch_id={uuid}
+{
+  "name": "Compressor Co",
+  "contact_person": "Ali",
+  "phone": "010…"
+}
+```
+
+- Server sets `suppliers.branch_id` from query/body/header branch filter.
+- Same pattern as parts — **POST must send branch**, not only GET.
+
+See [flutter-branch-switching-guide.md](./flutter-branch-switching-guide.md) §4.4.
+
 ---
 
 ## What is filtered per branch (summary)
@@ -132,13 +154,13 @@ See [flutter-parts-branch-warehouse.md](./flutter-parts-branch-warehouse.md).
 | Dashboard summary | ✅ | Stock, receivables, payables, weekly profit |
 | Inventory / warehouse | ✅ | Quantities per `stock.branch_id` |
 | Parts list | ✅ | `parts.branch_id` |
-| Suppliers list | ✅ | Suppliers with POs in that branch |
+| Suppliers list | ✅ | `suppliers.branch_id` |
 | Supplier debt view | ✅ | POs/installments for that branch |
 | Invoices | ✅ | `invoices.branch_id` |
 | Purchases / installments | ✅ | `purchase_orders.branch_id` |
 | Returns | ✅ | `returns.branch_id` |
 | Users list | ✅ | `users.branch_id` |
-| Customers list | — | Shared catalog; all customers returned (`branch_id` stored when known; receivables stay branch-scoped) |
+| Customers list | ✅ | `customers.branch_id` |
 | Business capital (`capital_amount`) | ✅ | Stored per branch (`branches.capital_amount`); dashboard sums all branches when no filter |
 | Owner cash-out profit limit | ✅ | Profit & withdrawals for selected branch |
 
@@ -215,7 +237,7 @@ Show a chip when filtered: `Branch: Main Shop` with clear (×) to reset to all b
 1. **Admin without `branch_id`** = aggregated numbers across all branches — do not mix with branch-filtered screens in the same view without clearing state.
 2. **Non-admin** must not send a different `branch_id` — API ignores it; do not show the dropdown.
 3. After creating an invoice/PO, pass the same `branch_id` filter when refreshing lists.
-4. **Customers** list is not branch-filtered — new customers appear immediately even if `branch_id` was not sent on POST. Receivables and invoices remain branch-scoped.
+4. **Customers** list is branch-filtered — send `branch_id` on POST when admin has a filter active.
 
 ---
 
@@ -229,5 +251,6 @@ php artisan test --filter=AdminBranchFilterTest
 
 ## Related
 
+- [flutter-branch-switching-guide.md](./flutter-branch-switching-guide.md) — parts, warehouse, customers, suppliers
 - [flutter-dashboard-transactions-guide.md](./flutter-dashboard-transactions-guide.md)
 - [architecture.md](./architecture.md)
