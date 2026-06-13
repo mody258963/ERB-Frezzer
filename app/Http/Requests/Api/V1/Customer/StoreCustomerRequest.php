@@ -16,6 +16,8 @@ class StoreCustomerRequest extends ApiFormRequest
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'linked_supplier_id' => ['nullable', 'uuid', 'exists:suppliers,id'],
             'branch_id' => ['nullable', 'uuid', 'exists:branches,id'],
+            'settlement_cycle' => ['nullable', 'in:daily,weekly'],
+            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -25,10 +27,15 @@ class StoreCustomerRequest extends ApiFormRequest
             $this->merge(['credit_limit' => 0]);
         }
 
+        if ($this->input('type') === 'credit' && ! $this->has('settlement_cycle')) {
+            $this->merge(['settlement_cycle' => 'weekly']);
+        }
+
         if ($this->input('type') === 'cash') {
             $this->merge([
                 'credit_limit' => 0,
                 'outstanding_balance' => 0,
+                'settlement_cycle' => null,
             ]);
         }
 

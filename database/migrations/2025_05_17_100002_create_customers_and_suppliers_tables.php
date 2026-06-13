@@ -17,6 +17,7 @@ return new class extends Migration
             $table->decimal('credit_limit', 12, 2)->default(0);
             $table->decimal('outstanding_balance', 12, 2)->default(0);
             $table->timestamp('last_settled_at')->nullable();
+            $table->string('settlement_cycle', 16)->default('weekly');
             $table->boolean('is_active')->default(true);
             $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->timestamps();

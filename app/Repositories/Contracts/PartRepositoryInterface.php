@@ -12,7 +12,7 @@ interface PartRepositoryInterface
 
     public function find(string $id): ?Part;
 
-    public function create(array $data): Part;
+    public function create(array $data, ?User $user = null): Part;
 
     public function update(Part $part, array $data): Part;
 }

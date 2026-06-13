@@ -80,29 +80,48 @@ The shop **feels** like each branch has its own parts, warehouse, and suppliers.
 
 When admin picks a branch, **inventory, sales, purchases, payables, and profit** are scoped to that branch.
 
-### 2. Shared master records (same row used by all branches)
+### 2. Branch-owned parts + warehouse stock
 
 | Table | Has `branch_id`? | Meaning |
 |-------|------------------|---------|
-| `parts` | **No** | One part code (e.g. `COMP-001`) is defined once; each branch has its own **quantity** in `stock` |
-| `suppliers` | **No** | One supplier record; **which branch bought** is on the purchase order |
+| `parts` | **Yes** | Each part belongs to **one branch** (`parts.branch_id`). Same `code` can exist in two branches as separate rows. |
+| `stock` | **Yes** (with `part_id`) | **Warehouse quantity** for that part in that branch. Created automatically when a part is created. |
+| `suppliers` | **No** | Shared supplier name; branch activity is on purchase orders |
 
-So: **warehouse is per branch**; **part definition** and **supplier name** are shared catalogs. Branch B can sell the same part SKU as branch A, with different stock levels.
+So: **part definition** and **warehouse row** are both tied to a branch. Branch A and Branch B each have their own part catalogs and stock levels.
 
-### 3. List APIs with branch filter (June 2026 update)
+### 3. List APIs with branch filter
 
 With `?branch_id=` active:
 
 | Endpoint | Filter behaviour |
 |----------|----------------|
-| `GET /parts` | Parts that have a **stock row** in that branch |
+| `GET /parts` | Parts where `parts.branch_id` = that branch |
+| `GET /inventory` | Stock rows for that branch (`stock.branch_id`) |
 | `GET /suppliers` | Suppliers with at least one **purchase order** in that branch |
 | `GET /suppliers/{id}/debt` | POs + installments for that branch only |
-| `GET /inventory` | Stock rows for that branch |
 
-### If you need fully separate catalogs per branch
+### Create part (must include branch)
 
-If branch A and branch B must have **different part codes** or **different supplier lists** with no sharing, the schema needs `branch_id` on `parts` and `suppliers` (not implemented yet). Tell the backend team if the client requires that.
+```http
+POST /api/v1/parts?branch_id={uuid}
+{
+  "code": "COMP-001",
+  "name": "...",
+  "category_key": "compressor",
+  "unit": "pc",
+  "sell_price": 100,
+  "cost_price": 50,
+  "min_stock": 10,
+  "initial_quantity": 25
+}
+```
+
+- Server sets `parts.branch_id` from query/body/header branch filter.
+- Server creates a **`stock`** row for that branch (warehouse).
+- Optional `initial_quantity` adds opening stock in one call.
+
+See [flutter-parts-branch-warehouse.md](./flutter-parts-branch-warehouse.md).
 
 ---
 
@@ -112,7 +131,7 @@ If branch A and branch B must have **different part codes** or **different suppl
 |------|---------|--------|
 | Dashboard summary | ✅ | Stock, receivables, payables, weekly profit |
 | Inventory / warehouse | ✅ | Quantities per `stock.branch_id` |
-| Parts list | ✅ | Parts stocked in that branch |
+| Parts list | ✅ | `parts.branch_id` |
 | Suppliers list | ✅ | Suppliers with POs in that branch |
 | Supplier debt view | ✅ | POs/installments for that branch |
 | Invoices | ✅ | `invoices.branch_id` |

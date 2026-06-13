@@ -46,6 +46,7 @@ class AdminBranchFilterTest extends TestCase
             'cost_price' => 40,
             'min_stock' => 0,
             'is_active' => true,
+            'branch_id' => $branchA->id,
         ]);
 
         Stock::query()->create(['part_id' => $part->id, 'branch_id' => $branchA->id, 'quantity' => 5, 'average_cost' => 40]);

@@ -13,6 +13,7 @@ final class SettlementUpcomingRowTransformer
             'customer_id' => $r->customer_id ?? null,
             'customer_name' => $r->customer_name ?? null,
             'amount_due' => isset($r->amount_due) ? (float) $r->amount_due : null,
+            'settlement_cycle' => $r->settlement_cycle ?? 'weekly',
         ];
     }
 }

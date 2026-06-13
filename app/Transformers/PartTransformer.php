@@ -26,6 +26,7 @@ final class PartTransformer
             'cost_price' => (float) $part->cost_price,
             'min_stock' => (int) $part->min_stock,
             'is_active' => $part->is_active,
+            'branch_id' => $part->branch_id,
             'image_url' => app(PartImageService::class)->url($part->image_path),
             'created_at' => $part->created_at?->toISOString(),
             'updated_at' => $part->updated_at?->toISOString(),

@@ -3,10 +3,10 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\SaturdaySettlement;
 use App\Models\User;
 use App\Repositories\Contracts\SaturdaySettlementRepositoryInterface;
+use App\Support\CustomerSettlementSchedule;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -36,25 +36,31 @@ class SaturdaySettlementRepository extends BaseRepository implements SaturdaySet
         return $this->createRecord($data);
     }
 
-    public function upcomingTotals(): Collection
+    public function upcomingTotals(?string $cycle = null): Collection
     {
         return Customer::query()
             ->where('type', 'credit')
             ->where('is_active', true)
+            ->when($cycle, fn ($q) => $q->where('settlement_cycle', $cycle))
             ->get()
-            ->map(function (Customer $c) {
-                $due = Invoice::query()
-                    ->where('customer_id', $c->id)
-                    ->where('payment_type', 'credit')
-                    ->where('is_paid', false)
-                    ->sum('total');
+            ->map(function (Customer $customer) {
+                $due = (float) $customer->outstanding_balance;
 
                 return (object) [
-                    'customer_id' => $c->id,
-                    'customer_name' => $c->name,
+                    'customer' => $customer,
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
                     'amount_due' => $due,
+                    'settlement_cycle' => $customer->settlement_cycle?->value ?? 'weekly',
                 ];
             })
+            ->filter(fn (object $row) => CustomerSettlementSchedule::isDue($row->customer, $row->amount_due))
+            ->map(fn (object $row) => (object) [
+                'customer_id' => $row->customer_id,
+                'customer_name' => $row->customer_name,
+                'amount_due' => $row->amount_due,
+                'settlement_cycle' => $row->settlement_cycle,
+            ])
             ->values();
     }
 }

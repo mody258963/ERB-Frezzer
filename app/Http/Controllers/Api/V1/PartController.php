@@ -11,6 +11,8 @@ use App\Http\Requests\Api\V1\Part\UpdatePartRequest;
 use App\Http\Resources\PartAnalysisResource;
 use App\Http\Resources\PartResource;
 use App\Repositories\Contracts\PartRepositoryInterface;
+use App\Repositories\Contracts\StockRepositoryInterface;
+use App\Services\InventoryService;
 use App\Services\PartAnalysisService;
 use App\Services\PartImageService;
 use App\Support\PartLookupResolver;
@@ -26,6 +28,8 @@ class PartController extends Controller
         private PartRepositoryInterface $parts,
         private PartAnalysisService $partAnalysis,
         private PartImageService $partImages,
+        private StockRepositoryInterface $stock,
+        private InventoryService $inventory,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -66,6 +70,7 @@ class PartController extends Controller
     public function store(StorePartRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $initialQuantity = (int) ($data['initial_quantity'] ?? 0);
 
         $part = $this->parts->create([
             'code' => $data['code'],
@@ -76,7 +81,19 @@ class PartController extends Controller
             'cost_price' => $data['cost_price'] ?? 0,
             'min_stock' => $data['min_stock'],
             'is_active' => $data['is_active'] ?? true,
-        ]);
+        ], $request->user());
+
+        $this->stock->firstOrCreate($part->id, $part->branch_id);
+
+        if ($initialQuantity > 0) {
+            $this->inventory->adjust($request->user(), [
+                'part_id' => $part->id,
+                'branch_id' => $part->branch_id,
+                'quantity_delta' => $initialQuantity,
+                'unit_cost' => $data['cost_price'] ?? 0,
+                'reason' => 'Opening stock',
+            ]);
+        }
 
         return (new PartResource($part->load(['category'])))
             ->response()

@@ -45,8 +45,16 @@ class SettlementController extends Controller
         );
     }
 
-    public function upcoming(): AnonymousResourceCollection
+    public function upcoming(Request $request): AnonymousResourceCollection
     {
-        return SettlementUpcomingRowResource::collection($this->settlements->upcomingTotals());
+        $cycle = $request->query('settlement_cycle');
+
+        if ($cycle !== null && ! in_array($cycle, ['daily', 'weekly'], true)) {
+            abort(422, 'settlement_cycle must be daily or weekly.');
+        }
+
+        return SettlementUpcomingRowResource::collection(
+            $this->settlements->upcomingTotals($cycle),
+        );
     }
 }

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('parts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('code')->unique();
+            $table->string('code');
             $table->string('name');
             $table->foreignUuid('category_id')->constrained('part_categories');
             $table->string('unit', 32);
@@ -19,7 +19,11 @@ return new class extends Migration
             $table->unsignedInteger('min_stock')->default(0);
             $table->boolean('is_active')->default(true);
             $table->string('image_path')->nullable();
+            $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->timestamps();
+
+            $table->unique(['code', 'branch_id']);
+            $table->index('branch_id');
         });
     }
 

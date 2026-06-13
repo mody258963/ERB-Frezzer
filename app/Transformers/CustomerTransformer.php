@@ -29,6 +29,7 @@ final class CustomerTransformer
                 'total_debt' => (float) $customer->linkedSupplier->total_debt,
             ] : null,
             'last_settled_at' => $customer->last_settled_at?->toISOString(),
+            'settlement_cycle' => self::enumValue($customer->settlement_cycle),
             'is_active' => $customer->is_active,
             'branch_id' => $customer->branch_id,
             'created_at' => $customer->created_at?->toISOString(),

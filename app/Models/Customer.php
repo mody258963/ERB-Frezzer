@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CustomerType;
+use App\Enums\SettlementCycle;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,13 +15,14 @@ class Customer extends Model
 
     protected $fillable = [
         'name', 'type', 'phone', 'address', 'credit_limit', 'outstanding_balance',
-        'last_settled_at', 'linked_supplier_id', 'is_active', 'branch_id',
+        'last_settled_at', 'linked_supplier_id', 'is_active', 'branch_id', 'settlement_cycle',
     ];
 
     protected function casts(): array
     {
         return [
             'type' => CustomerType::class,
+            'settlement_cycle' => SettlementCycle::class,
             'credit_limit' => 'decimal:2',
             'outstanding_balance' => 'decimal:2',
             'last_settled_at' => 'datetime',

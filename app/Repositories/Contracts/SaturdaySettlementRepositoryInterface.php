@@ -15,5 +15,5 @@ interface SaturdaySettlementRepositoryInterface
 
     public function create(array $data): SaturdaySettlement;
 
-    public function upcomingTotals(): Collection;
+    public function upcomingTotals(?string $cycle = null): Collection;
 }

@@ -26,7 +26,7 @@ class PartRepository extends BaseRepository implements PartRepositoryInterface
 
         return $this->newQuery()
             ->with(['category'])
-            ->when($branchId, fn ($q) => $q->whereHas('stock', fn ($s) => $s->where('branch_id', $branchId)))
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
             ->when($filters['category'] ?? null, fn ($q, $key) => $q->whereHas(
                 'category',
@@ -36,12 +36,13 @@ class PartRepository extends BaseRepository implements PartRepositoryInterface
                 $q->where('name', 'like', "%{$s}%")
                     ->orWhere('code', 'like', "%{$s}%");
             }))
-            ->when(! empty($filters['low_stock']), function ($q) {
-                return $q->whereIn('id', function ($sub) {
+            ->when(! empty($filters['low_stock']), function ($q) use ($branchId) {
+                return $q->whereIn('id', function ($sub) use ($branchId) {
                     $sub->select('part_id')
                         ->from('stock')
                         ->join('parts', 'parts.id', '=', 'stock.part_id')
-                        ->whereColumn('stock.quantity', '<', 'parts.min_stock');
+                        ->whereColumn('stock.quantity', '<', 'parts.min_stock')
+                        ->when($branchId, fn ($s) => $s->where('stock.branch_id', $branchId));
                 });
             })
             ->latest()
@@ -53,8 +54,18 @@ class PartRepository extends BaseRepository implements PartRepositoryInterface
         return $this->findById($id);
     }
 
-    public function create(array $data): Part
+    public function create(array $data, ?User $user = null): Part
     {
+        $user = $user ?? request()?->user();
+        unset($data['branch_id'], $data['initial_quantity']);
+
+        $branchId = BranchVisibility::activeBranchId($user);
+        if ($branchId === null) {
+            throw new \InvalidArgumentException('branch_id is required to create a part.');
+        }
+
+        $data['branch_id'] = $branchId;
+
         /** @var Part */
         return $this->createRecord($data);
     }

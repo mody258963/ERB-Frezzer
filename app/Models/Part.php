@@ -13,7 +13,7 @@ class Part extends Model
     use HasUuids;
 
     protected $fillable = [
-        'code', 'name', 'category_id', 'unit', 'sell_price', 'cost_price', 'min_stock', 'is_active', 'image_path',
+        'code', 'name', 'category_id', 'unit', 'sell_price', 'cost_price', 'min_stock', 'is_active', 'image_path', 'branch_id',
     ];
 
     protected function casts(): array
@@ -25,6 +25,11 @@ class Part extends Model
             'is_active' => 'boolean',
             'unit' => PartUnit::class,
         ];
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function category(): BelongsTo

@@ -15,6 +15,14 @@ class UpdateCustomerRequest extends ApiFormRequest
             'address' => ['nullable', 'string'],
             'credit_limit' => ['sometimes', 'numeric'],
             'linked_supplier_id' => ['nullable', 'uuid', 'exists:suppliers,id'],
+            'settlement_cycle' => ['nullable', 'in:daily,weekly'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('type') === 'cash') {
+            $this->merge(['settlement_cycle' => null]);
+        }
     }
 }

@@ -88,6 +88,9 @@ class CustomerPaymentService
             if (bccomp((string) $lockedCustomer->outstanding_balance, '0', 2) < 0) {
                 $lockedCustomer->outstanding_balance = '0.00';
             }
+            if (bccomp((string) $lockedCustomer->outstanding_balance, '0', 2) <= 0) {
+                $lockedCustomer->last_settled_at = now();
+            }
             $lockedCustomer->save();
 
             $this->audit->record(
