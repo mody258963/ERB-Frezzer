@@ -22,7 +22,7 @@ return new class extends Migration
             $table->foreignUuid('branch_id')->nullable()->constrained('branches')->nullOnDelete();
             $table->timestamps();
 
-            $table->unique(['code', 'branch_id']);
+            $table->unique(['code', 'branch_id'], 'parts_code_branch_id_unique');
             $table->index('branch_id');
         });
     }

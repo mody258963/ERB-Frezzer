@@ -416,4 +416,26 @@ php artisan test --filter=CustomerBranchFilterTest
 3. **Admin** picks branch (or all) — pass `branch_id` on every call when filtered.  
 4. Use **`can_select_branch`** and **`accessible_branch_ids`** from login — do not hard-code roles.  
 5. **POST must carry branch** same as GET for creates.  
-6. **Categories & units** are the only shared catalogs; everything else is branch data.
+---
+
+## 15. Fresh database — `branch_id` on parts, suppliers, customers
+
+`branch_id` is defined in the **base** migrations (not a separate alter migration):
+
+| Table | Migration file |
+|-------|----------------|
+| `parts.branch_id` | `2025_05_17_100001_create_parts_table.php` |
+| `customers.branch_id` | `2025_05_17_100002_create_customers_and_suppliers_tables.php` |
+| `suppliers.branch_id` | `2025_05_17_100002_create_customers_and_suppliers_tables.php` |
+
+After pulling latest backend, reset and seed:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+**Warning:** `migrate:fresh` drops all data. Use only on dev/staging or when you intentionally reset production.
+
+If production still has the old schema without `branch_id`, you must either run `migrate:fresh --seed` (data loss) or add a one-off alter migration — the base files alone do not alter an already-migrated database.
+
+---
