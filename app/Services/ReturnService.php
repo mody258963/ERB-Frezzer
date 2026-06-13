@@ -145,7 +145,7 @@ class ReturnService
         $stock = Stock::query()->whereKey($stock->id)->lockForUpdate()->firstOrFail();
         $this->wac->applyInbound(
             $stock,
-            (int) $item->quantity,
+            $item->quantity,
             $this->wac->snapshotCost($stock),
         );
         $this->movements->create([
@@ -169,7 +169,7 @@ class ReturnService
         string $notes,
     ): void {
         $stock = $this->stock->lockForPartAndBranch($item->part_id, $return->branch_id);
-        if (! $stock || $stock->quantity < $item->quantity) {
+        if (! $stock || bccomp((string) $stock->quantity, (string) $item->quantity, 4) < 0) {
             throw new \InvalidArgumentException(
                 "Insufficient stock to complete supplier return for part {$item->part_id}."
             );

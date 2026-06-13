@@ -127,7 +127,7 @@ class PurchaseOrderService
             foreach ($po->items as $item) {
                 $stock = $this->stock->firstOrCreate($item->part_id, $po->branch_id);
                 $stock = Stock::query()->whereKey($stock->id)->lockForUpdate()->firstOrFail();
-                $this->wac->applyInbound($stock, (int) $item->quantity, (string) $item->unit_cost);
+                $this->wac->applyInbound($stock, $item->quantity, (string) $item->unit_cost);
                 $this->movements->create([
                     'part_id' => $item->part_id,
                     'branch_id' => $po->branch_id,

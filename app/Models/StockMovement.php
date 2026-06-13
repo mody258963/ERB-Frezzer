@@ -22,7 +22,7 @@ class StockMovement extends Model
     {
         return [
             'movement_type' => StockMovementType::class,
-            'quantity' => 'integer',
+            'quantity' => 'decimal:4',
             'created_at' => 'datetime',
         ];
     }

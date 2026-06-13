@@ -15,7 +15,7 @@ final class DashboardInventoryRowTransformer
             'part_code' => $row['part_code'] ?? null,
             'branch_id' => $row['branch_id'] ?? null,
             'branch_name' => $row['branch_name'] ?? null,
-            'quantity' => (int) ($row['quantity'] ?? 0),
+            'quantity' => (float) ($row['quantity'] ?? 0),
             'average_cost' => (float) ($row['average_cost'] ?? 0),
             'value_at_cost' => (float) ($row['value_at_cost'] ?? 0),
             'min_stock' => isset($row['min_stock']) ? (int) $row['min_stock'] : null,

@@ -3,10 +3,13 @@
 namespace App\Http\Requests\Api\V1\Purchase;
 
 use App\Http\Requests\Api\V1\ApiFormRequest;
+use App\Http\Requests\Api\V1\Concerns\ValidatesItemQuantities;
 use App\Models\Supplier;
 
 class StorePurchaseRequest extends ApiFormRequest
 {
+    use ValidatesItemQuantities;
+
     public function rules(): array
     {
         return [
@@ -18,7 +21,7 @@ class StorePurchaseRequest extends ApiFormRequest
             'installment_start_date' => ['nullable', 'date'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.part_id' => ['required', 'uuid'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
         ];
     }
@@ -42,5 +45,7 @@ class StorePurchaseRequest extends ApiFormRequest
                 );
             }
         });
+
+        $this->validateItemQuantities($validator);
     }
 }

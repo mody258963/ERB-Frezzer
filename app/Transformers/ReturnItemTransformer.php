@@ -18,7 +18,7 @@ final class ReturnItemTransformer
             'id' => $item->id,
             'return_id' => $item->return_id,
             'part_id' => $item->part_id,
-            'quantity' => (int) $item->quantity,
+            'quantity' => (float) $item->quantity,
             'unit_price' => (float) $item->unit_price,
             'condition' => self::enumValue($item->condition),
             'total' => (float) $item->total,

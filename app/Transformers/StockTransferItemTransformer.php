@@ -15,7 +15,7 @@ final class StockTransferItemTransformer
             'id' => $item->id,
             'transfer_id' => $item->transfer_id,
             'part_id' => $item->part_id,
-            'quantity' => (int) $item->quantity,
+            'quantity' => (float) $item->quantity,
         ];
 
         if ($item->relationLoaded('part') && $item->part) {

@@ -28,7 +28,7 @@ class InvoiceReturnContextService
 
         $soldByPart = $invoice->items
             ->groupBy('part_id')
-            ->map(fn ($rows) => (int) $rows->sum('quantity'))
+            ->map(fn ($rows) => (float) $rows->sum('quantity'))
             ->all();
 
         $completed = $this->returnedQuantitiesByPartForStatuses(
@@ -82,16 +82,16 @@ class InvoiceReturnContextService
 
         $items = $invoice->items->map(function ($item) use ($byPart) {
             $stats = $byPart[$item->part_id] ?? [
-                'quantity_sold' => (int) $item->quantity,
+                'quantity_sold' => (float) $item->quantity,
                 'quantity_returned_completed' => 0,
                 'quantity_returned_pending' => 0,
-                'quantity_available' => (int) $item->quantity,
+                'quantity_available' => (float) $item->quantity,
             ];
 
             return [
                 'id' => $item->id,
                 'part_id' => $item->part_id,
-                'quantity' => (int) $item->quantity,
+                'quantity' => (float) $item->quantity,
                 'unit_price' => (float) $item->unit_price,
                 'line_total' => (float) $item->total,
                 'quantity_sold' => $stats['quantity_sold'],
@@ -183,7 +183,7 @@ class InvoiceReturnContextService
             ->select('return_items.part_id', DB::raw('SUM(return_items.quantity) as qty'))
             ->groupBy('return_items.part_id')
             ->pluck('qty', 'return_items.part_id')
-            ->map(fn ($qty) => (int) $qty)
+            ->map(fn ($qty) => (float) $qty)
             ->all();
     }
 

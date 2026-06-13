@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignUuid('part_id')->constrained('parts');
             $table->foreignUuid('branch_id')->constrained('branches');
             $table->string('movement_type', 32);
-            $table->integer('quantity');
+            $table->decimal('quantity', 12, 4);
             $table->uuid('reference_id')->nullable();
             $table->string('reference_type', 64)->nullable();
             $table->text('notes')->nullable();

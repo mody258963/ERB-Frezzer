@@ -26,7 +26,7 @@ class StockRepository implements StockRepositoryInterface
         );
     }
 
-    public function adjustQuantity(Stock $stock, int $delta): void
+    public function adjustQuantity(Stock $stock, float|int|string $delta): void
     {
         $stock->increment('quantity', $delta);
     }

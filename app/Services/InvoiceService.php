@@ -30,7 +30,7 @@ class InvoiceService
     ) {}
 
     /**
-     * @param  array{customer_id: string, branch_id: string, payment_type: string, discount?: float|int|string, items: list<array{part_id: string, quantity: int}>}  $data
+     * @param  array{customer_id: string, branch_id: string, payment_type: string, discount?: float|int|string, items: list<array{part_id: string, quantity: float|int|string}>}  $data
      */
     public function create(User $user, array $data): Invoice
     {
@@ -41,12 +41,12 @@ class InvoiceService
 
             foreach ($data['items'] as $line) {
                 $stock = $this->stock->lockForPartAndBranch($line['part_id'], $data['branch_id']);
-                $avail = $stock?->quantity ?? 0;
-                if ($avail < $line['quantity']) {
+                $avail = (string) ($stock?->quantity ?? '0');
+                if (bccomp($avail, (string) $line['quantity'], 4) < 0) {
                     $failures[] = [
                         'part_id' => $line['part_id'],
-                        'requested' => $line['quantity'],
-                        'available' => $avail,
+                        'requested' => (float) $line['quantity'],
+                        'available' => (float) $avail,
                     ];
                 }
             }
@@ -171,7 +171,7 @@ class InvoiceService
             foreach ($invoice->items as $item) {
                 $stock = $this->stock->firstOrCreate($item->part_id, $invoice->branch_id);
                 $stock = Stock::query()->whereKey($stock->id)->lockForUpdate()->firstOrFail();
-                $this->wac->applyInbound($stock, (int) $item->quantity, (string) $item->unit_cost);
+                $this->wac->applyInbound($stock, $item->quantity, (string) $item->unit_cost);
                 $this->movements->create([
                     'part_id' => $item->part_id,
                     'branch_id' => $invoice->branch_id,

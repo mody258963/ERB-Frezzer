@@ -114,7 +114,7 @@ class PartAnalysisService
         return $query->get()->map(fn (Stock $s) => [
             'branch_id' => $s->branch_id,
             'branch_name' => $s->branch?->name,
-            'quantity' => (int) $s->quantity,
+            'quantity' => (float) $s->quantity,
             'average_cost' => (float) $s->average_cost,
             'value_at_cost' => (float) bcmul((string) $s->quantity, (string) $s->average_cost, 2),
         ])->values()->all();
@@ -249,7 +249,7 @@ class PartAnalysisService
                 'movement_type' => $r->movement_type instanceof StockMovementType
                     ? $r->movement_type->value
                     : (string) $r->movement_type,
-                'quantity' => (int) $r->quantity,
+                'quantity' => (float) $r->quantity,
             ])
             ->values()
             ->all();
@@ -275,7 +275,7 @@ class PartAnalysisService
         return $query->get()->map(fn (StockMovement $m) => [
             'id' => $m->id,
             'movement_type' => $m->movement_type->value,
-            'quantity' => (int) $m->quantity,
+            'quantity' => (float) $m->quantity,
             'branch_id' => $m->branch_id,
             'branch_name' => $m->branch?->name,
             'reference_id' => $m->reference_id,

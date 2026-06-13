@@ -70,7 +70,7 @@ class PartController extends Controller
     public function store(StorePartRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $initialQuantity = (int) ($data['initial_quantity'] ?? 0);
+        $initialQuantity = $data['initial_quantity'] ?? 0;
 
         $part = $this->parts->create([
             'code' => $data['code'],

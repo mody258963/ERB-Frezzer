@@ -27,6 +27,14 @@ enum PartUnit: string
         };
     }
 
+    public function allowsFractionalQuantity(): bool
+    {
+        return match ($this) {
+            self::Kilogram, self::Meter, self::Liter => true,
+            default => false,
+        };
+    }
+
     /**
      * @return list<array{value: string, label: string}>
      */

@@ -23,17 +23,17 @@ final class InvoiceItemTransformer
             'id' => $item->id,
             'invoice_id' => $item->invoice_id,
             'part_id' => $item->part_id,
-            'quantity' => (int) $item->quantity,
+            'quantity' => (float) $item->quantity,
             'unit_price' => (float) $item->unit_price,
             'total' => (float) $item->total,
         ];
 
         if ($returnQuantitiesByPart !== null) {
             $stats = $returnQuantitiesByPart[$item->part_id] ?? [
-                'quantity_sold' => (int) $item->quantity,
+                'quantity_sold' => (float) $item->quantity,
                 'quantity_returned_completed' => 0,
                 'quantity_returned_pending' => 0,
-                'quantity_available' => (int) $item->quantity,
+                'quantity_available' => (float) $item->quantity,
             ];
             $data['quantity_sold'] = $stats['quantity_sold'];
             $data['quantity_returned_completed'] = $stats['quantity_returned_completed'];

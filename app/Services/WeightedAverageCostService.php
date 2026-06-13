@@ -7,34 +7,38 @@ use App\Models\Stock;
 
 class WeightedAverageCostService
 {
-    public function blendInbound(Stock $stock, int $incomingQty, string $incomingUnitCost): string
+    public function blendInbound(Stock $stock, float|int|string $incomingQty, string $incomingUnitCost): string
     {
-        if ($incomingQty <= 0) {
+        $incomingQty = (string) $incomingQty;
+
+        if (bccomp($incomingQty, '0', 4) <= 0) {
             return (string) $stock->average_cost;
         }
 
-        $oldQty = (int) $stock->quantity;
+        $oldQty = (string) $stock->quantity;
         $oldAvg = (string) $stock->average_cost;
 
-        if ($oldQty <= 0) {
+        if (bccomp($oldQty, '0', 4) <= 0) {
             return $incomingUnitCost;
         }
 
-        $oldValue = bcmul((string) $oldQty, $oldAvg, 4);
-        $inValue = bcmul((string) $incomingQty, $incomingUnitCost, 4);
-        $newQty = $oldQty + $incomingQty;
+        $oldValue = bcmul($oldQty, $oldAvg, 4);
+        $inValue = bcmul($incomingQty, $incomingUnitCost, 4);
+        $newQty = bcadd($oldQty, $incomingQty, 4);
 
-        return bcdiv(bcadd($oldValue, $inValue, 4), (string) $newQty, 2);
+        return bcdiv(bcadd($oldValue, $inValue, 4), $newQty, 2);
     }
 
-    public function applyInbound(Stock $stock, int $incomingQty, string $incomingUnitCost): void
+    public function applyInbound(Stock $stock, float|int|string $incomingQty, string $incomingUnitCost): void
     {
-        if ($incomingQty <= 0) {
+        $incomingQty = (string) $incomingQty;
+
+        if (bccomp($incomingQty, '0', 4) <= 0) {
             return;
         }
 
         $stock->average_cost = $this->blendInbound($stock, $incomingQty, $incomingUnitCost);
-        $stock->quantity += $incomingQty;
+        $stock->quantity = bcadd((string) $stock->quantity, $incomingQty, 4);
         $stock->save();
 
         $this->syncPartRollupCost($stock->part_id);
@@ -58,21 +62,21 @@ class WeightedAverageCostService
             ->where('part_id', $partId)
             ->get(['quantity', 'average_cost']);
 
-        $totalQty = 0;
+        $totalQty = '0';
         $totalValue = '0';
 
         foreach ($rows as $row) {
-            $qty = (int) $row->quantity;
-            if ($qty <= 0) {
+            $qty = (string) $row->quantity;
+            if (bccomp($qty, '0', 4) <= 0) {
                 continue;
             }
 
-            $totalQty += $qty;
-            $totalValue = bcadd($totalValue, bcmul((string) $qty, (string) $row->average_cost, 4), 4);
+            $totalQty = bcadd($totalQty, $qty, 4);
+            $totalValue = bcadd($totalValue, bcmul($qty, (string) $row->average_cost, 4), 4);
         }
 
-        $rollup = $totalQty > 0
-            ? bcdiv($totalValue, (string) $totalQty, 2)
+        $rollup = bccomp($totalQty, '0', 4) > 0
+            ? bcdiv($totalValue, $totalQty, 2)
             : '0';
 
         Part::query()->whereKey($partId)->update(['cost_price' => $rollup]);

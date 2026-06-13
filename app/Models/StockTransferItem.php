@@ -16,7 +16,7 @@ class StockTransferItem extends Model
 
     protected function casts(): array
     {
-        return ['quantity' => 'integer'];
+        return ['quantity' => 'decimal:4'];
     }
 
     public function transfer(): BelongsTo

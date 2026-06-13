@@ -5,11 +5,14 @@ namespace App\Http\Requests\Api\V1\ProductReturn;
 use App\Enums\ReturnReferenceType;
 use App\Enums\ReturnType;
 use App\Http\Requests\Api\V1\ApiFormRequest;
+use App\Http\Requests\Api\V1\Concerns\ValidatesItemQuantities;
 use App\Models\InvoiceItem;
 use App\Services\ReturnQuantityValidator;
 
 class StoreProductReturnRequest extends ApiFormRequest
 {
+    use ValidatesItemQuantities;
+
     public function rules(): array
     {
         return [
@@ -23,10 +26,15 @@ class StoreProductReturnRequest extends ApiFormRequest
             'attachment_url' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.part_id' => ['required', 'uuid'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_price' => ['required', 'numeric'],
             'items.*.condition' => ['required', 'in:sellable,defective'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $this->validateItemQuantities($validator);
     }
 
     /**

@@ -36,7 +36,7 @@ class StockTransferService
 
             foreach ($transfer->items as $item) {
                 $from = $this->stock->lockForPartAndBranch($item->part_id, $transfer->from_branch_id);
-                if (! $from || $from->quantity < $item->quantity) {
+                if (! $from || bccomp((string) $from->quantity, (string) $item->quantity, 4) < 0) {
                     throw new \InvalidArgumentException('Insufficient stock at source branch for part '.$item->part_id);
                 }
 
@@ -45,7 +45,7 @@ class StockTransferService
 
                 $to = $this->stock->firstOrCreate($item->part_id, $transfer->to_branch_id);
                 $to = Stock::query()->whereKey($to->id)->lockForUpdate()->firstOrFail();
-                $this->wac->applyInbound($to, (int) $item->quantity, $sourceUnitCost);
+                $this->wac->applyInbound($to, $item->quantity, $sourceUnitCost);
 
                 $this->movements->create([
                     'part_id' => $item->part_id,

@@ -15,7 +15,7 @@ final class PurchaseOrderItemTransformer
             'id' => $item->id,
             'po_id' => $item->po_id,
             'part_id' => $item->part_id,
-            'quantity' => (int) $item->quantity,
+            'quantity' => (float) $item->quantity,
             'unit_cost' => (float) $item->unit_cost,
             'total' => (float) $item->total,
         ];

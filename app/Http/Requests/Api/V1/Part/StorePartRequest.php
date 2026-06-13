@@ -35,7 +35,7 @@ class StorePartRequest extends ApiFormRequest
             'min_stock' => ['required', 'integer', 'min:0'],
             'is_active' => ['boolean'],
             'branch_id' => ['nullable', 'uuid', 'exists:branches,id'],
-            'initial_quantity' => ['nullable', 'integer', 'min:0'],
+            'initial_quantity' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

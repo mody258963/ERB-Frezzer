@@ -17,7 +17,7 @@ class Stock extends Model
     protected function casts(): array
     {
         return [
-            'quantity' => 'integer',
+            'quantity' => 'decimal:4',
             'average_cost' => 'decimal:2',
         ];
     }

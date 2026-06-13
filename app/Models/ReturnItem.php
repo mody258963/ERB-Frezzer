@@ -20,7 +20,7 @@ class ReturnItem extends Model
     protected function casts(): array
     {
         return [
-            'quantity' => 'integer',
+            'quantity' => 'decimal:4',
             'unit_price' => 'decimal:2',
             'unit_cost' => 'decimal:2',
             'total' => 'decimal:2',

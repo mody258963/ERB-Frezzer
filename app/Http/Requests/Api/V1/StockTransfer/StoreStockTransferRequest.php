@@ -3,9 +3,12 @@
 namespace App\Http\Requests\Api\V1\StockTransfer;
 
 use App\Http\Requests\Api\V1\ApiFormRequest;
+use App\Http\Requests\Api\V1\Concerns\ValidatesItemQuantities;
 
 class StoreStockTransferRequest extends ApiFormRequest
 {
+    use ValidatesItemQuantities;
+
     public function rules(): array
     {
         return [
@@ -14,7 +17,12 @@ class StoreStockTransferRequest extends ApiFormRequest
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.part_id' => ['required', 'uuid'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $this->validateItemQuantities($validator);
     }
 }

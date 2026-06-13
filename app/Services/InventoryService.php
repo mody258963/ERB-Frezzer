@@ -21,7 +21,7 @@ class InventoryService
     ) {}
 
     /**
-     * @param  array{part_id: string, branch_id: string, quantity_delta: int, unit_cost?: string|float|null, reason?: ?string}  $data
+     * @param  array{part_id: string, branch_id: string, quantity_delta: float|int|string, unit_cost?: string|float|null, reason?: ?string}  $data
      */
     public function adjust(User $user, array $data): void
     {
@@ -33,7 +33,7 @@ class InventoryService
                 $unitCost = array_key_exists('unit_cost', $data) && $data['unit_cost'] !== null
                     ? (string) $data['unit_cost']
                     : $this->wac->snapshotCost($stock);
-                $this->wac->applyInbound($stock, (int) $data['quantity_delta'], $unitCost);
+                $this->wac->applyInbound($stock, $data['quantity_delta'], $unitCost);
             } else {
                 $this->stock->adjustQuantity($stock, $data['quantity_delta']);
             }

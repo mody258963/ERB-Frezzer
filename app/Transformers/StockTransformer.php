@@ -15,7 +15,7 @@ final class StockTransformer
             'id' => $stock->id,
             'part_id' => $stock->part_id,
             'branch_id' => $stock->branch_id,
-            'quantity' => (int) $stock->quantity,
+            'quantity' => (float) $stock->quantity,
             'created_at' => $stock->created_at?->toISOString(),
             'updated_at' => $stock->updated_at?->toISOString(),
         ];
