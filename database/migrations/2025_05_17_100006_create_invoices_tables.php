@@ -34,7 +34,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('invoice_id')->constrained('invoices')->cascadeOnDelete();
             $table->foreignUuid('part_id')->constrained('parts');
-            $table->decimal('quantity', 12, 4);
+            $table->unsignedInteger('quantity');
             $table->decimal('unit_price', 12, 2);
             $table->decimal('unit_cost', 12, 2)->default(0);
             $table->decimal('total', 12, 2);

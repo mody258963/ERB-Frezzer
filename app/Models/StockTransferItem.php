@@ -12,11 +12,14 @@ class StockTransferItem extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['transfer_id', 'part_id', 'quantity'];
+    protected $fillable = ['transfer_id', 'part_id', 'quantity', 'unit_cost'];
 
     protected function casts(): array
     {
-        return ['quantity' => 'decimal:4'];
+        return [
+            'quantity' => 'decimal:4',
+            'unit_cost' => 'decimal:2',
+        ];
     }
 
     public function transfer(): BelongsTo

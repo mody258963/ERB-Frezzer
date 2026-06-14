@@ -16,6 +16,7 @@ final class StockTransferItemTransformer
             'transfer_id' => $item->transfer_id,
             'part_id' => $item->part_id,
             'quantity' => (float) $item->quantity,
+            'unit_cost' => $item->unit_cost !== null ? (float) $item->unit_cost : null,
         ];
 
         if ($item->relationLoaded('part') && $item->part) {

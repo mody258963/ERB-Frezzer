@@ -18,6 +18,7 @@ class StoreStockTransferRequest extends ApiFormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.part_id' => ['required', 'uuid'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'items.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

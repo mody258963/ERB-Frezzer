@@ -35,17 +35,23 @@ class BranchFinanceService
         $amount = '0';
         foreach ($transfer->items as $item) {
             $part = $item->part ?? Part::query()->find($item->part_id);
-            $fromStock = Stock::query()
-                ->where('part_id', $item->part_id)
-                ->where('branch_id', $transfer->from_branch_id)
-                ->first();
-            $costUnit = (string) ($fromStock?->average_cost ?? '0');
-            if (bccomp($costUnit, '0', 2) <= 0) {
-                $costUnit = (string) ($part?->cost_price ?? '0');
+
+            if ($valuation === 'sell') {
+                $unit = (string) ($part?->sell_price ?? 0);
+            } elseif ($item->unit_cost !== null && bccomp((string) $item->unit_cost, '0', 2) > 0) {
+                $unit = (string) $item->unit_cost;
+            } else {
+                $fromStock = Stock::query()
+                    ->where('part_id', $item->part_id)
+                    ->where('branch_id', $transfer->from_branch_id)
+                    ->first();
+                $costUnit = (string) ($fromStock?->average_cost ?? '0');
+                if (bccomp($costUnit, '0', 2) <= 0) {
+                    $costUnit = (string) ($part?->cost_price ?? '0');
+                }
+                $unit = $costUnit;
             }
-            $unit = $valuation === 'sell'
-                ? (string) ($part?->sell_price ?? 0)
-                : $costUnit;
+
             $line = bcmul($unit, (string) $item->quantity, 2);
             $amount = bcadd($amount, $line, 2);
         }

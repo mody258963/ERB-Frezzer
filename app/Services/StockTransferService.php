@@ -40,12 +40,14 @@ class StockTransferService
                     throw new \InvalidArgumentException('Insufficient stock at source branch for part '.$item->part_id);
                 }
 
-                $sourceUnitCost = $this->wac->snapshotCost($from);
+                $transferUnitCost = $item->unit_cost !== null
+                    ? (string) $item->unit_cost
+                    : $this->wac->snapshotCost($from);
                 $this->stock->adjustQuantity($from, -1 * $item->quantity);
 
                 $to = $this->stock->firstOrCreate($item->part_id, $transfer->to_branch_id);
                 $to = Stock::query()->whereKey($to->id)->lockForUpdate()->firstOrFail();
-                $this->wac->applyInbound($to, $item->quantity, $sourceUnitCost);
+                $this->wac->applyInbound($to, $item->quantity, $transferUnitCost);
 
                 $this->movements->create([
                     'part_id' => $item->part_id,
