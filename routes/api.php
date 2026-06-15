@@ -75,6 +75,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/transfers', [StockTransferController::class, 'index']);
         Route::post('/transfers', [StockTransferController::class, 'store'])->middleware('role:admin,manager,warehouse');
         Route::get('/transfers/{id}', [StockTransferController::class, 'show']);
+        Route::patch('/transfers/{id}', [StockTransferController::class, 'update'])->middleware('role:admin');
+        Route::put('/transfers/{id}', [StockTransferController::class, 'update'])->middleware('role:admin');
         Route::patch('/transfers/{id}/complete', [StockTransferController::class, 'complete'])->middleware('role:admin,manager,warehouse');
         Route::patch('/transfers/{id}/cancel', [StockTransferController::class, 'cancel'])->middleware('role:admin,manager');
 
@@ -93,6 +95,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/customers/{id}/invoices', [CustomerController::class, 'invoices']);
         Route::get('/customers/{id}/balance', [CustomerController::class, 'balance']);
         Route::post('/customers/{id}/payments', [CustomerController::class, 'collectPayment'])->middleware('role:admin,manager');
+        Route::patch('/customers/{id}/payments/{paymentId}', [CustomerController::class, 'updatePayment'])->middleware('role:admin');
+        Route::put('/customers/{id}/payments/{paymentId}', [CustomerController::class, 'updatePayment'])->middleware('role:admin');
         Route::get('/customers/{id}/payments', [CustomerController::class, 'payments']);
         Route::get('/customers/{id}/linked-balance', [CustomerController::class, 'linkedBalance']);
         Route::post('/customers/{id}/offset-supplier', [CustomerController::class, 'offsetSupplier'])->middleware('role:admin,manager');

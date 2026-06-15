@@ -49,4 +49,22 @@ class StockTransferRepository extends BaseRepository implements StockTransferRep
     {
         $this->saveRecord($transfer);
     }
+
+    /**
+     * @param  list<array{part_id: string, quantity: float|int|string, unit_cost?: float|int|string|null}>  $items
+     */
+    public function syncItems(StockTransfer $transfer, array $items): StockTransfer
+    {
+        $transfer->items()->delete();
+
+        foreach ($items as $item) {
+            $transfer->items()->create([
+                'part_id' => $item['part_id'],
+                'quantity' => $item['quantity'],
+                'unit_cost' => $item['unit_cost'] ?? null,
+            ]);
+        }
+
+        return $transfer->fresh(['items.part', 'fromBranch', 'toBranch', 'creator']);
+    }
 }

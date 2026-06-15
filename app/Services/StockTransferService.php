@@ -107,4 +107,29 @@ class StockTransferService
 
         $this->audit->record($user, 'transfer.cancel', 'stock_transfer', $transfer->id, $before, $transfer->toArray());
     }
+
+    /**
+     * @param  array{notes?: ?string, items?: list<array{part_id: string, quantity: float|int|string, unit_cost?: float|int|string|null}>}  $data
+     */
+    public function updatePending(User $user, StockTransfer $transfer, array $data): StockTransfer
+    {
+        if ($transfer->status !== StockTransferStatus::Pending) {
+            throw new \InvalidArgumentException('Only pending transfers can be edited.');
+        }
+
+        $before = $transfer->load('items')->toArray();
+
+        if (array_key_exists('notes', $data)) {
+            $transfer->notes = $data['notes'];
+            $this->transfers->save($transfer);
+        }
+
+        if (isset($data['items'])) {
+            $transfer = $this->transfers->syncItems($transfer, $data['items']);
+        }
+
+        $this->audit->record($user, 'transfer.update', 'stock_transfer', $transfer->id, $before, $transfer->fresh(['items'])?->toArray());
+
+        return $transfer->fresh(['items.part', 'fromBranch', 'toBranch', 'creator']);
+    }
 }

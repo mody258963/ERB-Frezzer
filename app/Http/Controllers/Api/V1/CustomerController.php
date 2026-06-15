@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\Customer\CollectCustomerPaymentRequest;
 use App\Http\Requests\Api\V1\Customer\IndexCustomerRequest;
 use App\Http\Requests\Api\V1\Customer\OffsetSupplierRequest;
 use App\Http\Requests\Api\V1\Customer\StoreCustomerRequest;
+use App\Http\Requests\Api\V1\Customer\UpdateCustomerPaymentRequest;
 use App\Http\Requests\Api\V1\Customer\UpdateCustomerRequest;
 use App\Http\Resources\ContraSettlementResource;
 use App\Http\Resources\CustomerBalanceResource;
@@ -15,6 +16,7 @@ use App\Http\Resources\CustomerPaymentResource;
 use App\Http\Resources\CustomerResource;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\LinkedPartyBalanceResource;
+use App\Models\CustomerPayment;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Services\ContraSettlementService;
 use App\Services\CustomerPaymentService;
@@ -100,6 +102,16 @@ class CustomerController extends Controller
 
         return CustomerPaymentResource::collection(
             $this->customerPayments->history($id, (int) $request->query('per_page', 25))
+        );
+    }
+
+    public function updatePayment(UpdateCustomerPaymentRequest $request, string $id, string $paymentId): CustomerPaymentResource
+    {
+        $customer = $this->customers->findOrFail($id);
+        $payment = CustomerPayment::query()->findOrFail($paymentId);
+
+        return new CustomerPaymentResource(
+            $this->customerPayments->update($request->user(), $customer, $payment, $request->validated())
         );
     }
 

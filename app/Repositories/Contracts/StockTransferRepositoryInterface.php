@@ -17,4 +17,9 @@ interface StockTransferRepositoryInterface
     public function create(array $data, array $items): StockTransfer;
 
     public function save(StockTransfer $transfer): void;
+
+    /**
+     * @param  list<array{part_id: string, quantity: float|int|string, unit_cost?: float|int|string|null}>  $items
+     */
+    public function syncItems(StockTransfer $transfer, array $items): StockTransfer;
 }

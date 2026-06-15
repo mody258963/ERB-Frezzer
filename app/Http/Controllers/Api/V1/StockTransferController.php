@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StockTransfer\CompleteStockTransferRequest;
 use App\Http\Requests\Api\V1\StockTransfer\StoreStockTransferRequest;
+use App\Http\Requests\Api\V1\StockTransfer\UpdateStockTransferRequest;
 use App\Http\Resources\MessageResource;
 use App\Http\Resources\StockTransferResource;
 use App\Repositories\Contracts\StockTransferRepositoryInterface;
@@ -51,6 +52,15 @@ class StockTransferController extends Controller
     public function show(string $id): StockTransferResource
     {
         return new StockTransferResource($this->resolveOrFail($this->transfers->findWithItems($id)));
+    }
+
+    public function update(UpdateStockTransferRequest $request, string $id): StockTransferResource
+    {
+        return new StockTransferResource($this->transferService->updatePending(
+            $request->user(),
+            $this->transfers->findOrFail($id),
+            $request->validated(),
+        ));
     }
 
     public function complete(CompleteStockTransferRequest $request, string $id): StockTransferResource

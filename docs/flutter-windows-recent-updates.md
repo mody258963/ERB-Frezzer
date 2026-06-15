@@ -13,6 +13,9 @@ Guide for the **Flutter Windows ERP** client: what changed on the API, what to b
 | Postman | `postman/ERB-Frezzer-API.postman_collection.json` |
 | **Flutter bug fixes (purchases, installments, returns)** | [flutter-app-fixes.md](./flutter-app-fixes.md) |
 | **May 2026 — dashboard profit, financial reports, users/branches** | [flutter-dev-updates-may-2026.md](./flutter-dev-updates-may-2026.md) |
+| **June 2026 — all Windows updates (start here)** | [flutter-june-2026-windows-updates.md](./flutter-june-2026-windows-updates.md) |
+| **June 2026 — decimal quantities (meters), transfers `unit_cost`** | [flutter-decimal-quantities-and-transfers.md](./flutter-decimal-quantities-and-transfers.md) |
+| **June 2026 — admin edit pending transfers & latest payment** | [flutter-admin-transaction-edits.md](./flutter-admin-transaction-edits.md) |
 | **All transactions + dashboard (E2E tested)** | [flutter-dashboard-transactions-guide.md](./flutter-dashboard-transactions-guide.md) |
 
 ---
