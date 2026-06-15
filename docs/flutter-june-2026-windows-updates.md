@@ -26,6 +26,7 @@ Read this page first, then open the detailed doc for each topic.
 3. **Transfers:** multi-line POST; optional `unit_cost`; complete with `valuation`.
 4. **Admin:** edit **pending** transfers (`PATCH /transfers/{id}`); edit **latest** customer payment (`PATCH /customers/{id}/payments/{paymentId}`).
 5. **Production backend:** `php artisan migrate --force` once (decimal columns). **Never** `migrate:refresh` on production.
+6. **Delete part:** `DELETE /parts/{id}` is soft-delete (`is_active: false`). Part disappears from catalog + **inventory totals**; use `GET /parts?include_inactive=1` for archive view only.
 
 ---
 

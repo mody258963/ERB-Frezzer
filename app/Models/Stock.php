@@ -31,4 +31,15 @@ class Stock extends Model
     {
         return $this->belongsTo(Branch::class);
     }
+
+    /**
+     * Stock rows for parts still in the active catalog (not soft-deleted).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeForActiveParts($query)
+    {
+        return $query->whereHas('part', fn ($q) => $q->where('is_active', true));
+    }
 }

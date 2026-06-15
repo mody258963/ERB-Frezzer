@@ -101,6 +101,7 @@ class ReportQueryService
     public function inventoryValuation(): array
     {
         return Stock::query()
+            ->forActiveParts()
             ->join('parts', 'parts.id', '=', 'stock.part_id')
             ->selectRaw('stock.part_id, parts.code, parts.name, SUM(stock.quantity) as qty, SUM(stock.quantity * stock.average_cost) as value_cost, parts.sell_price')
             ->groupBy('stock.part_id', 'parts.code', 'parts.name', 'parts.sell_price')

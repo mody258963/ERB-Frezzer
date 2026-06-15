@@ -218,7 +218,7 @@ class CapitalService
      */
     public function financingSnapshot(float $capitalAmount, ?string $branchId = null): array
     {
-        $stockQuery = Stock::query();
+        $stockQuery = Stock::query()->forActiveParts();
         if ($branchId !== null) {
             $stockQuery->where('branch_id', $branchId);
         }

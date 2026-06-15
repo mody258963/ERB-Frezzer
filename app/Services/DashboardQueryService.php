@@ -68,7 +68,7 @@ class DashboardQueryService
 
     public function inventory(?string $branchId = null): array
     {
-        $query = Stock::query()->with(['part', 'branch']);
+        $query = Stock::query()->with(['part', 'branch'])->forActiveParts();
 
         if ($branchId !== null) {
             $query->where('branch_id', $branchId);

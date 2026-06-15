@@ -15,6 +15,7 @@ use App\Repositories\Contracts\StockRepositoryInterface;
 use App\Services\InventoryService;
 use App\Services\PartAnalysisService;
 use App\Services\PartImageService;
+use App\Services\DashboardCacheService;
 use App\Support\PartLookupResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ class PartController extends Controller
         private PartImageService $partImages,
         private StockRepositoryInterface $stock,
         private InventoryService $inventory,
+        private DashboardCacheService $dashboardCache,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -122,6 +124,7 @@ class PartController extends Controller
     {
         $part = $this->resolveOrFail($this->parts->find($id));
         $this->parts->update($part, ['is_active' => false]);
+        $this->dashboardCache->forgetAllSummaries();
 
         return response()->json(null, 204);
     }

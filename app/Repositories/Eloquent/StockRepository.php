@@ -35,6 +35,7 @@ class StockRepository implements StockRepositoryInterface
     {
         return DB::table('stock')
             ->join('parts', 'parts.id', '=', 'stock.part_id')
+            ->where('parts.is_active', true)
             ->whereColumn('stock.quantity', '<', 'parts.min_stock')
             ->select([
                 'stock.part_id',
