@@ -24,7 +24,8 @@ class InventoryController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Stock::query()->with(['part', 'branch']);
+        $query = Stock::query()->with(['part', 'branch'])
+            ->whereHas('part', fn ($q) => $q->where('is_active', true));
         BranchVisibility::scope($request->user(), $query, 'branch_id');
 
         $query->when($request->query('branch_id'), fn ($q, $id) => $q->where('branch_id', $id))
@@ -40,7 +41,9 @@ class InventoryController extends Controller
 
     public function byBranch(Request $request, string $branchId): AnonymousResourceCollection
     {
-        $query = Stock::query()->with('part')->where('branch_id', $branchId);
+        $query = Stock::query()->with('part')
+            ->where('branch_id', $branchId)
+            ->whereHas('part', fn ($q) => $q->where('is_active', true));
         BranchVisibility::scope($request->user(), $query, 'branch_id');
 
         return StockResource::collection($query->get());

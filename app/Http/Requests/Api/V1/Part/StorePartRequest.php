@@ -21,6 +21,8 @@ class StorePartRequest extends ApiFormRequest
                 Rule::unique('parts', 'code')->where(function ($query) {
                     $branchId = $this->resolvedPartBranchId();
 
+                    $query->where('is_active', true);
+
                     return $branchId === null
                         ? $query->whereNull('branch_id')
                         : $query->where('branch_id', $branchId);

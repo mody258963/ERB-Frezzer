@@ -39,6 +39,7 @@ class PartController extends Controller
             'category_id' => $request->query('category_id'),
             'search' => $request->query('search'),
             'low_stock' => $request->boolean('low_stock'),
+            'include_inactive' => $request->boolean('include_inactive'),
         ];
 
         return PartResource::collection(

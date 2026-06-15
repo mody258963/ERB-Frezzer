@@ -22,6 +22,8 @@ class UpdatePartRequest extends ApiFormRequest
                 Rule::unique('parts', 'code')
                     ->ignore($id)
                     ->where(function ($query) use ($branchId) {
+                        $query->where('is_active', true);
+
                         return $branchId === null
                             ? $query->whereNull('branch_id')
                             : $query->where('branch_id', $branchId);
