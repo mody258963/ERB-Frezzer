@@ -25,7 +25,7 @@ class InventoryService
      */
     public function adjust(User $user, array $data): void
     {
-        DB::transaction(function () use ($user, $data) {
+        $stockId = DB::transaction(function () use ($user, $data) {
             $stock = $this->stock->firstOrCreate($data['part_id'], $data['branch_id']);
             $stock = Stock::query()->whereKey($stock->id)->lockForUpdate()->firstOrFail();
 
@@ -49,10 +49,12 @@ class InventoryService
                 'created_by' => $user->id,
                 'created_at' => now(),
             ]);
+
+            return $stock->id;
         });
 
         $before = ['stock' => 'adjusted'];
-        $this->audit->record($user, 'inventory.adjust', 'stock', $data['part_id'].'|'.$data['branch_id'], $before, $data);
+        $this->audit->record($user, 'inventory.adjust', 'stock', $stockId, $before, $data);
         $this->lowStock->notifyIfNeeded($data['part_id'], $data['branch_id']);
         $this->dashboardCache->forgetAllSummaries();
     }

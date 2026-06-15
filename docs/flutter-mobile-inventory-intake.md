@@ -160,7 +160,8 @@ sequenceDiagram
   App->>API: GET /part-categories + /part-units
   opt Admin or manager — new product
     User->>App: Capture photo + fill form
-    App->>API: POST /parts
+    Note over App: branchId from user.branch_id or admin picker
+    App->>API: POST /parts?branch_id=… (+ body + X-Branch-Id)
     API-->>App: 201 part id
     App->>API: POST /parts/{id}/image (multipart)
     API-->>App: 200 image_url
@@ -411,10 +412,38 @@ Paginated Laravel shape:
 
 **Roles:** admin, manager only.
 
+**Branch is required.** Every part belongs to one branch warehouse. The API returns **422** if `branch_id` is missing when the server cannot infer it (typical for **admin** users).
+
+### Resolve `branchId` before POST
+
+After `GET /auth/me`:
+
+| User | How to get `branchId` |
+|------|------------------------|
+| **Manager / warehouse / salesperson** (`can_select_branch: false`) | Use `user.branch_id` — server also infers it, but **still send it** in the request |
+| **Admin** (`can_select_branch: true`) | **Must pick a branch** in the intake UI (`GET /branches/active`) and store `selectedBranchId` |
+
+```dart
+String resolveIntakeBranchId(AuthUser user, String? adminSelectedBranchId) {
+  if (!user.canSelectBranch) {
+    return user.branchId!; // from login / auth/me
+  }
+  if (adminSelectedBranchId == null || adminSelectedBranchId.isEmpty) {
+    throw StateError('Admin must select a branch before creating a part');
+  }
+  return adminSelectedBranchId;
+}
+```
+
+Send the same `branchId` on **POST /parts**, **POST /inventory/adjust**, and **GET /inventory/{branchId}**.
+
+### Request
+
 ```http
-POST /api/v1/parts
+POST /api/v1/parts?branch_id={branch-uuid}
 Content-Type: application/json
 Authorization: Bearer <token>
+X-Branch-Id: {branch-uuid}
 
 {
   "code": "INTAKE-20260604-001",
@@ -424,13 +453,17 @@ Authorization: Bearer <token>
   "sell_price": 1500,
   "cost_price": 1100,
   "min_stock": 2,
-  "is_active": true
+  "is_active": true,
+  "branch_id": "{branch-uuid}"
 }
 ```
 
+Use **all three** on POST (query + header + JSON body) so mobile intake never omits branch context.
+
 | Field | Validation | Notes |
 |-------|------------|-------|
-| `code` | Required, unique, max 64 | Use barcode, supplier SKU, or generated `INTAKE-{date}-{seq}` |
+| `branch_id` | **Required** (admin); recommended always | Query param, `X-Branch-Id` header, and/or JSON body |
+| `code` | Required, unique **per branch**, max 64 | Use barcode, supplier SKU, or generated `INTAKE-{date}-{seq}` |
 | `name` | Required, max 255 | From label or user typing |
 | `category_key` *or* `category_id` | One required | Prefer `category_key` |
 | `unit` | Required enum | From `/part-units` |
@@ -463,7 +496,36 @@ Authorization: Bearer <token>
 | `401` | Token expired | Login screen |
 | `403` | Wrong role (e.g. warehouse) | Hide create UI; stock-only mode |
 | `422` | Validation | Map `errors` to fields |
-| `422` on `code` | Duplicate code | Suggest search or edit code |
+| `422` on `branch_id` | **Missing branch on POST /parts** (common for **admin**) | Pick branch before intake; send `branch_id` in query, header, and JSON — see above |
+| `422` on `code` | Duplicate code **in same branch** | Suggest search or edit code |
+
+**Exact error you may see in logs:**
+
+```
+branch_id is required. Send ?branch_id= on POST, include branch_id in JSON, or use the X-Branch-Id header.
+```
+
+Fix in `IntakeApi.createPart` — do not call `POST /parts` until `branchId` is set.
+
+### Dio example (`intake_api.dart`)
+
+```dart
+Future<Map<String, dynamic>> createPart({
+  required String branchId,
+  required Map<String, dynamic> body,
+}) async {
+  final response = await dio.post(
+    '/parts',
+    queryParameters: {'branch_id': branchId},
+    data: {
+      ...body,
+      'branch_id': branchId,
+    },
+    options: Options(headers: {'X-Branch-Id': branchId}),
+  );
+  return response.data as Map<String, dynamic>;
+}
+```
 
 ---
 
