@@ -10,14 +10,17 @@ use App\Http\Resources\DashboardPayablesResource;
 use App\Http\Resources\DashboardReceivableRowResource;
 use App\Http\Resources\DashboardSalesResource;
 use App\Http\Resources\DashboardSummaryResource;
+use App\Services\CapitalService;
 use App\Services\DashboardQueryService;
 use App\Support\BranchVisibility;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class DashboardController extends Controller
 {
     public function __construct(
-        private DashboardQueryService $dashboard
+        private DashboardQueryService $dashboard,
+        private CapitalService $capital,
     ) {}
 
     public function summary(BranchScopedRequest $request): DashboardSummaryResource
@@ -25,6 +28,16 @@ class DashboardController extends Controller
         $branchId = BranchVisibility::activeBranchId($request->user());
 
         return new DashboardSummaryResource($this->dashboard->summary($branchId));
+    }
+
+    public function cash(BranchScopedRequest $request): JsonResponse
+    {
+        $branchId = BranchVisibility::activeBranchId($request->user());
+        $from = now()->startOfWeek();
+        $to = now()->endOfWeek();
+        $capitalAmount = $this->capital->capitalAmount($branchId);
+
+        return response()->json($this->dashboard->cashSnapshot($capitalAmount, $from, $to, $branchId));
     }
 
     public function inventory(BranchScopedRequest $request): AnonymousResourceCollection

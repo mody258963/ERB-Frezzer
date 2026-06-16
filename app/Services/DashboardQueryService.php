@@ -2,10 +2,16 @@
 
 namespace App\Services;
 
+use App\Enums\SettlementPaymentMethod;
+use App\Models\CustomerPayment;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\OwnerCashOut;
+use App\Models\ProductReturn;
+use App\Models\SaturdaySettlement;
 use App\Models\Stock;
 use App\Models\SupplierInstallment;
+use App\Models\SupplierInstallmentPayment;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -34,6 +40,7 @@ class DashboardQueryService
             $capitalAmount = $this->capital->capitalAmount($branchId);
             $capitalSnapshot = $this->capital->financingSnapshot($capitalAmount, $branchId);
             $profitWithdrawal = $this->capital->profitWithdrawalSnapshot($branchId);
+            $cashSnapshot = $this->cashSnapshot($capitalAmount, $from, $to, $branchId);
 
             $metrics = $this->financialMetrics->totals($from, $to, $branchId);
             $supplierMetrics = $this->financialMetrics->supplierMetrics($from, $to, $branchId);
@@ -45,10 +52,20 @@ class DashboardQueryService
                 'total_stock_value_cost' => $capitalSnapshot['inventory_at_cost'],
                 'business_capital' => $capitalAmount,
                 'capital_currency' => $capitalSetting->currency,
-                'capital_estimated_available' => $capitalSnapshot['estimated_available'],
+                // Keep key for backward compatibility; value now reflects realized cash position only.
+                'capital_estimated_available' => $cashSnapshot['cash_on_hand_realized'],
                 'withdrawable_profit' => $profitWithdrawal['withdrawable_profit'],
                 'realized_profit' => $profitWithdrawal['realized_profit'],
                 'total_owner_cash_outs' => $profitWithdrawal['total_withdrawn'],
+                'must_collect_customers' => $cashSnapshot['must_collect_customers'],
+                'must_pay_suppliers' => $cashSnapshot['must_pay_suppliers'],
+                'cash_on_hand_realized' => $cashSnapshot['cash_on_hand_realized'],
+                'lifetime_cash_in_realized' => $cashSnapshot['lifetime_cash_in_realized'],
+                'lifetime_cash_out_realized' => $cashSnapshot['lifetime_cash_out_realized'],
+                'weekly_cash_in_realized' => $cashSnapshot['weekly_cash_in_realized'],
+                'weekly_cash_out_realized' => $cashSnapshot['weekly_cash_out_realized'],
+                'weekly_net_cash_flow_realized' => $cashSnapshot['weekly_net_cash_flow_realized'],
+                'legacy_estimated_available' => $capitalSnapshot['estimated_available'],
                 'weekly_revenue' => $metrics['revenue'],
                 'weekly_discount' => $metrics['discount'],
                 'weekly_customer_refunds' => $metrics['customer_refunds'],
@@ -64,6 +81,138 @@ class DashboardQueryService
                 'unpaid_installments_count' => $supplierMetrics['unpaid_installments_count'],
             ];
         });
+    }
+
+    /**
+     * Real-cash snapshot:
+     * - "must collect" / "must pay" = obligations (not yet realized cash)
+     * - "cash on hand realized" = only events that have actually happened
+     *
+     * @return array<string, float>
+     */
+    public function cashSnapshot(
+        float $capitalAmount,
+        \Carbon\CarbonInterface $from,
+        \Carbon\CarbonInterface $to,
+        ?string $branchId = null
+    ): array {
+        $mustCollect = $this->capital->showWithSnapshot($branchId)['financing_snapshot']['customer_receivables'] ?? 0;
+        $mustPay = $this->capital->showWithSnapshot($branchId)['financing_snapshot']['supplier_debt'] ?? 0;
+
+        $cashSalesTotal = Invoice::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('payment_type', 'cash')
+            ->sum('total');
+        $cashSalesWeekly = Invoice::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('payment_type', 'cash')
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('total');
+
+        $customerPaymentsTotal = CustomerPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('customer', fn ($c) => $c->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->sum('amount');
+        $customerPaymentsWeekly = CustomerPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('customer', fn ($c) => $c->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('amount');
+
+        $settlementInTotal = SaturdaySettlement::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('invoices', fn ($i) => $i->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->sum('total_amount');
+        $settlementInWeekly = SaturdaySettlement::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('invoices', fn ($i) => $i->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('total_amount');
+
+        $supplierPaymentsTotal = SupplierInstallmentPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('installment.purchaseOrder', fn ($po) => $po->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->sum('amount');
+        $supplierPaymentsWeekly = SupplierInstallmentPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('installment.purchaseOrder', fn ($po) => $po->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->where('paid_at', '>=', $from)
+            ->where('paid_at', '<=', $to)
+            ->sum('amount');
+
+        $customerRefundsCashOutTotal = ProductReturn::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('return_type', 'customer_return')
+            ->where('status', 'completed')
+            ->whereIn('resolution', ['refund_cash', 'writeoff'])
+            ->sum('total_value');
+        $customerRefundsCashOutWeekly = ProductReturn::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('return_type', 'customer_return')
+            ->where('status', 'completed')
+            ->whereIn('resolution', ['refund_cash', 'writeoff'])
+            ->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereNotNull('completed_at')
+                        ->where('completed_at', '>=', $from)
+                        ->where('completed_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->whereNull('completed_at')
+                        ->where('updated_at', '>=', $from)
+                        ->where('updated_at', '<=', $to);
+                });
+            })
+            ->sum('total_value');
+
+        $ownerCashOutTotal = OwnerCashOut::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->sum('amount');
+        $ownerCashOutWeekly = OwnerCashOut::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('amount');
+
+        $cashInLifetime = (float) bcadd(
+            bcadd((string) $cashSalesTotal, (string) $customerPaymentsTotal, 2),
+            (string) $settlementInTotal,
+            2
+        );
+        $cashOutLifetime = (float) bcadd(
+            bcadd((string) $supplierPaymentsTotal, (string) $customerRefundsCashOutTotal, 2),
+            (string) $ownerCashOutTotal,
+            2
+        );
+        $cashOnHand = (float) bcsub(
+            bcadd((string) $capitalAmount, (string) $cashInLifetime, 2),
+            (string) $cashOutLifetime,
+            2
+        );
+
+        $cashInWeekly = (float) bcadd(
+            bcadd((string) $cashSalesWeekly, (string) $customerPaymentsWeekly, 2),
+            (string) $settlementInWeekly,
+            2
+        );
+        $cashOutWeekly = (float) bcadd(
+            bcadd((string) $supplierPaymentsWeekly, (string) $customerRefundsCashOutWeekly, 2),
+            (string) $ownerCashOutWeekly,
+            2
+        );
+
+        return [
+            'must_collect_customers' => (float) $mustCollect,
+            'must_pay_suppliers' => (float) $mustPay,
+            'cash_on_hand_realized' => $cashOnHand,
+            'lifetime_cash_in_realized' => $cashInLifetime,
+            'lifetime_cash_out_realized' => $cashOutLifetime,
+            'weekly_cash_in_realized' => $cashInWeekly,
+            'weekly_cash_out_realized' => $cashOutWeekly,
+            'weekly_net_cash_flow_realized' => (float) bcsub((string) $cashInWeekly, (string) $cashOutWeekly, 2),
+        ];
     }
 
     public function inventory(?string $branchId = null): array

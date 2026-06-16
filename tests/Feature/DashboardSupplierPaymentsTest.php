@@ -33,6 +33,17 @@ class DashboardSupplierPaymentsTest extends TestCase
     public function test_purchase_and_installment_payment_reflect_on_dashboard(): void
     {
         $branch = Branch::query()->firstOrFail();
+        $this->withToken($this->token)->putJson('/api/v1/settings/capital', [
+            'capital_amount' => 500000,
+            'reason' => 'Opening capital for cash snapshot test',
+            'branch_id' => $branch->id,
+        ])->assertOk();
+
+        $cashBefore = $this->withToken($this->token)
+            ->getJson('/api/v1/dashboard/cash?branch_id='.$branch->id)
+            ->assertOk()
+            ->json();
+
         $supplier = Supplier::query()->create([
             'name' => 'Dash Supplier',
             'phone' => null,
@@ -73,6 +84,8 @@ class DashboardSupplierPaymentsTest extends TestCase
         $this->assertEquals(100000.0, $afterOrder['weekly_purchases_ordered']);
         $this->assertEquals(100000.0, $afterOrder['unpaid_installments_total']);
         $this->assertEquals(4, $afterOrder['unpaid_installments_count']);
+        $this->assertEquals(100000.0, $afterOrder['must_pay_suppliers']);
+        $this->assertEquals($cashBefore['cash_on_hand_realized'], $afterOrder['cash_on_hand_realized']);
 
         $installmentId = (string) $this->withToken($this->token)
             ->getJson("/api/v1/purchases/{$poId}")
@@ -92,5 +105,11 @@ class DashboardSupplierPaymentsTest extends TestCase
         $this->assertEquals(75000.0, $afterPay['total_supplier_debt']);
         $this->assertEquals(25000.0, $afterPay['weekly_supplier_payments']);
         $this->assertEquals(75000.0, $afterPay['unpaid_installments_total']);
+        $this->assertEquals(75000.0, $afterPay['must_pay_suppliers']);
+        $this->assertEquals(25000.0, $afterPay['weekly_cash_out_realized']);
+        $this->assertEquals(
+            (float) $cashBefore['cash_on_hand_realized'] - 25000.0,
+            (float) $afterPay['cash_on_hand_realized']
+        );
     }
 }
