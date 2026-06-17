@@ -18,6 +18,7 @@ final class DashboardSalesTransformer
         $totals = $payload['totals'] ?? [];
 
         return [
+            'period' => $payload['period'] ?? null,
             'totals' => [
                 'revenue' => (float) ($totals['revenue'] ?? 0),
                 'discount' => (float) ($totals['discount'] ?? 0),

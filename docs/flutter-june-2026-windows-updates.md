@@ -17,6 +17,7 @@ Read this page first, then open the detailed doc for each topic.
 | Branch on GET vs POST | [flutter-branch-switching-guide.md](./flutter-branch-switching-guide.md) | Dio interceptor |
 | Weighted average cost | [flutter-weighted-average-cost.md](./flutter-weighted-average-cost.md) | Read-only cost on inventory |
 | Real cash dashboard boxes (`must_collect`, `must_pay`, `cash_on_hand`) | [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md) | New dashboard cards based on realized cash |
+| Dashboard period filter (`day` / `week` / `month`) | [flutter-dashboard-period-filter.md](./flutter-dashboard-period-filter.md) | Segmented filter on summary, sales, cash |
 
 ---
 

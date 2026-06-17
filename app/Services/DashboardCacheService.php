@@ -15,15 +15,16 @@ class DashboardCacheService
 
     public function forgetAllSummaries(): void
     {
-        Cache::forget($this->keySummary(null));
-        foreach (Cache::get('dashboard.summary.branches', []) as $branchId) {
-            Cache::forget($this->keySummary($branchId));
-        }
+        $version = (int) Cache::get('dashboard.summary.version', 1);
+        Cache::forever('dashboard.summary.version', $version + 1);
     }
 
-    public function keySummary(?string $branchId = null): string
+    public function keySummary(?string $branchId = null, ?string $periodSuffix = null): string
     {
-        return self::SUMMARY_PREFIX.($branchId ?? 'all');
+        $version = (int) Cache::get('dashboard.summary.version', 1);
+        $suffix = $periodSuffix ?? 'week.'.now()->toDateString();
+
+        return self::SUMMARY_PREFIX.$version.'.'.($branchId ?? 'all').'.'.$suffix;
     }
 
     public function rememberBranchKey(string $branchId): void

@@ -10,6 +10,8 @@ class BranchScopedRequest extends ApiFormRequest
     {
         return [
             'branch_id' => ['nullable', 'uuid'],
+            'period' => ['nullable', 'in:day,week,month'],
+            'date' => ['nullable', 'date'],
         ];
     }
 }

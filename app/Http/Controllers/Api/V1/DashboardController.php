@@ -13,6 +13,7 @@ use App\Http\Resources\DashboardSummaryResource;
 use App\Services\CapitalService;
 use App\Services\DashboardQueryService;
 use App\Support\BranchVisibility;
+use App\Support\DashboardPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -26,18 +27,27 @@ class DashboardController extends Controller
     public function summary(BranchScopedRequest $request): DashboardSummaryResource
     {
         $branchId = BranchVisibility::activeBranchId($request->user());
+        $period = DashboardPeriod::fromRequest(
+            $request->query('period'),
+            $request->query('date'),
+        );
 
-        return new DashboardSummaryResource($this->dashboard->summary($branchId));
+        return new DashboardSummaryResource($this->dashboard->summary($branchId, $period));
     }
 
     public function cash(BranchScopedRequest $request): JsonResponse
     {
         $branchId = BranchVisibility::activeBranchId($request->user());
-        $from = now()->startOfWeek();
-        $to = now()->endOfWeek();
+        $period = DashboardPeriod::fromRequest(
+            $request->query('period'),
+            $request->query('date'),
+        );
         $capitalAmount = $this->capital->capitalAmount($branchId);
 
-        return response()->json($this->dashboard->cashSnapshot($capitalAmount, $from, $to, $branchId));
+        return response()->json(array_merge(
+            ['period' => $period->toArray()],
+            $this->dashboard->cashSnapshot($capitalAmount, $period->from, $period->to, $branchId),
+        ));
     }
 
     public function inventory(BranchScopedRequest $request): AnonymousResourceCollection
@@ -64,8 +74,12 @@ class DashboardController extends Controller
     public function sales(BranchScopedRequest $request): DashboardSalesResource
     {
         $branchId = BranchVisibility::activeBranchId($request->user());
+        $period = DashboardPeriod::fromRequest(
+            $request->query('period'),
+            $request->query('date'),
+        );
 
-        return new DashboardSalesResource($this->dashboard->sales($branchId));
+        return new DashboardSalesResource($this->dashboard->sales($branchId, $period));
     }
 
     public function activity(): AnonymousResourceCollection

@@ -12,6 +12,7 @@ use App\Models\SaturdaySettlement;
 use App\Models\Stock;
 use App\Models\SupplierInstallment;
 use App\Models\SupplierInstallmentPayment;
+use App\Support\DashboardPeriod;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -25,17 +26,18 @@ class DashboardQueryService
         private CapitalService $capital,
     ) {}
 
-    public function summary(?string $branchId = null): array
+    public function summary(?string $branchId = null, ?DashboardPeriod $period = null): array
     {
-        $from = now()->startOfWeek();
-        $to = now()->endOfWeek();
-        $cacheKey = $this->dashboardCache->keySummary($branchId);
+        $period ??= DashboardPeriod::fromRequest(null, null);
+        $from = $period->from;
+        $to = $period->to;
+        $cacheKey = $this->dashboardCache->keySummary($branchId, $period->cacheSuffix());
 
         if ($branchId !== null) {
             $this->dashboardCache->rememberBranchKey($branchId);
         }
 
-        return Cache::remember($cacheKey, self::TTL, function () use ($from, $to, $branchId) {
+        return Cache::remember($cacheKey, self::TTL, function () use ($from, $to, $branchId, $period) {
             $capitalSetting = $this->capital->settings();
             $capitalAmount = $this->capital->capitalAmount($branchId);
             $capitalSnapshot = $this->capital->financingSnapshot($capitalAmount, $branchId);
@@ -46,6 +48,7 @@ class DashboardQueryService
             $supplierMetrics = $this->financialMetrics->supplierMetrics($from, $to, $branchId);
 
             return [
+                'period' => $period->toArray(),
                 'branch_id' => $branchId,
                 'total_receivables' => $capitalSnapshot['customer_receivables'],
                 'total_supplier_debt' => $capitalSnapshot['supplier_debt'],
@@ -62,10 +65,23 @@ class DashboardQueryService
                 'cash_on_hand_realized' => $cashSnapshot['cash_on_hand_realized'],
                 'lifetime_cash_in_realized' => $cashSnapshot['lifetime_cash_in_realized'],
                 'lifetime_cash_out_realized' => $cashSnapshot['lifetime_cash_out_realized'],
-                'weekly_cash_in_realized' => $cashSnapshot['weekly_cash_in_realized'],
-                'weekly_cash_out_realized' => $cashSnapshot['weekly_cash_out_realized'],
-                'weekly_net_cash_flow_realized' => $cashSnapshot['weekly_net_cash_flow_realized'],
+                'period_cash_in_realized' => $cashSnapshot['period_cash_in_realized'],
+                'period_cash_out_realized' => $cashSnapshot['period_cash_out_realized'],
+                'period_net_cash_flow_realized' => $cashSnapshot['period_net_cash_flow_realized'],
+                'weekly_cash_in_realized' => $cashSnapshot['period_cash_in_realized'],
+                'weekly_cash_out_realized' => $cashSnapshot['period_cash_out_realized'],
+                'weekly_net_cash_flow_realized' => $cashSnapshot['period_net_cash_flow_realized'],
                 'legacy_estimated_available' => $capitalSnapshot['estimated_available'],
+                'period_revenue' => $metrics['revenue'],
+                'period_discount' => $metrics['discount'],
+                'period_customer_refunds' => $metrics['customer_refunds'],
+                'period_net_sales' => $metrics['net_sales'],
+                'period_gross_profit' => $metrics['gross_profit'],
+                'period_customer_refund_profit_impact' => $metrics['customer_refund_profit_impact'],
+                'period_profit' => $metrics['profit'],
+                'period_supplier_payments' => $supplierMetrics['weekly_supplier_payments'],
+                'period_purchases_ordered' => $supplierMetrics['weekly_purchases_ordered'],
+                'period_purchases_received' => $supplierMetrics['weekly_purchases_received'],
                 'weekly_revenue' => $metrics['revenue'],
                 'weekly_discount' => $metrics['discount'],
                 'weekly_customer_refunds' => $metrics['customer_refunds'],
@@ -209,9 +225,9 @@ class DashboardQueryService
             'cash_on_hand_realized' => $cashOnHand,
             'lifetime_cash_in_realized' => $cashInLifetime,
             'lifetime_cash_out_realized' => $cashOutLifetime,
-            'weekly_cash_in_realized' => $cashInWeekly,
-            'weekly_cash_out_realized' => $cashOutWeekly,
-            'weekly_net_cash_flow_realized' => (float) bcsub((string) $cashInWeekly, (string) $cashOutWeekly, 2),
+            'period_cash_in_realized' => $cashInWeekly,
+            'period_cash_out_realized' => $cashOutWeekly,
+            'period_net_cash_flow_realized' => (float) bcsub((string) $cashInWeekly, (string) $cashOutWeekly, 2),
         ];
     }
 
@@ -303,10 +319,11 @@ class DashboardQueryService
         ];
     }
 
-    public function sales(?string $branchId = null): array
+    public function sales(?string $branchId = null, ?DashboardPeriod $period = null): array
     {
-        $from = now()->startOfWeek();
-        $to = now()->endOfWeek();
+        $period ??= DashboardPeriod::fromRequest(null, null);
+        $from = $period->from;
+        $to = $period->to;
 
         $categoryQuery = Invoice::query()
             ->join('invoice_items', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -371,6 +388,7 @@ class DashboardQueryService
         $totals = $this->financialMetrics->totals($from, $to, $branchId);
 
         return [
+            'period' => $period->toArray(),
             'totals' => $totals,
             'by_category' => $byCategory,
             'by_branch' => $byBranch,
