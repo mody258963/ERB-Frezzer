@@ -29,6 +29,8 @@ final class BranchFinancialEntryTransformer
             'created_by' => $entry->created_by,
             'settled_at' => $entry->settled_at?->toISOString(),
             'settled_by' => $entry->settled_by,
+            'voided_at' => $entry->voided_at?->toISOString(),
+            'voided_by' => $entry->voided_by,
             'created_at' => $entry->created_at?->toISOString(),
             'updated_at' => $entry->updated_at?->toISOString(),
         ];

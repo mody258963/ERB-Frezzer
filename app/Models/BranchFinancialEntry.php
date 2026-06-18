@@ -26,6 +26,8 @@ class BranchFinancialEntry extends Model
         'created_by',
         'settled_at',
         'settled_by',
+        'voided_at',
+        'voided_by',
     ];
 
     protected function casts(): array
@@ -35,7 +37,18 @@ class BranchFinancialEntry extends Model
             'entry_type' => BranchFinancialEntryType::class,
             'status' => BranchFinancialEntryStatus::class,
             'settled_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
+    }
+
+    public function voider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->voided_at !== null;
     }
 
     public function creditorBranch(): BelongsTo

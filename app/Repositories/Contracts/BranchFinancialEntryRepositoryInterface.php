@@ -23,4 +23,9 @@ interface BranchFinancialEntryRepositoryInterface
      * @return Collection<int, BranchFinancialEntry>
      */
     public function openChargesBetween(string $creditorBranchId, string $debtorBranchId): Collection;
+
+    /**
+     * @return Collection<int, BranchFinancialEntry>
+     */
+    public function activePaymentsBetween(string $creditorBranchId, string $debtorBranchId): Collection;
 }

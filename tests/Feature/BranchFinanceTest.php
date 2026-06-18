@@ -30,7 +30,7 @@ class BranchFinanceTest extends TestCase
         ]);
         $warehouseId = (string) $warehouse->json('id');
 
-        $part = $this->withToken($token)->postJson('/api/v1/parts', [
+        $part = $this->withToken($token)->postJson('/api/v1/parts?branch_id='.$mainBranchId, [
             'code' => 'FIN-P1',
             'name' => 'Finance Part',
             'category_key' => 'compressor',
@@ -38,15 +38,11 @@ class BranchFinanceTest extends TestCase
             'sell_price' => 100,
             'cost_price' => 40,
             'min_stock' => 0,
+            'branch_id' => $mainBranchId,
+            'initial_quantity' => 20,
             'is_active' => true,
         ]);
         $partId = (string) $part->json('id');
-
-        $this->withToken($token)->postJson('/api/v1/inventory/adjust', [
-            'part_id' => $partId,
-            'branch_id' => $mainBranchId,
-            'quantity_delta' => 20,
-        ])->assertOk();
 
         $transfer = $this->withToken($token)->postJson('/api/v1/transfers', [
             'from_branch_id' => $mainBranchId,
@@ -106,5 +102,68 @@ class BranchFinanceTest extends TestCase
         $balances = $this->withToken($token)->getJson('/api/v1/branch-finance/balances');
         $balances->assertOk()
             ->assertJsonPath('balances.0.balance_owed', 300);
+    }
+
+    public function test_payment_creates_fifo_allocations(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ]);
+        $token = (string) $login->json('token');
+
+        $creditor = (string) Branch::query()->value('id');
+        $debtor = (string) $this->withToken($token)->postJson('/api/v1/branches', [
+            'name' => 'Allocation Debtor',
+            'is_active' => true,
+        ])->json('id');
+
+        $chargeId = (string) $this->withToken($token)->postJson('/api/v1/branch-finance/charges', [
+            'creditor_branch_id' => $creditor,
+            'debtor_branch_id' => $debtor,
+            'amount' => 400,
+        ])->json('id');
+
+        $paymentId = (string) $this->withToken($token)->postJson('/api/v1/branch-finance/payments', [
+            'creditor_branch_id' => $creditor,
+            'debtor_branch_id' => $debtor,
+            'amount' => 400,
+        ])->json('id');
+
+        $this->assertDatabaseHas('branch_financial_payment_allocations', [
+            'payment_entry_id' => $paymentId,
+            'charge_entry_id' => $chargeId,
+            'amount' => '400.00',
+        ]);
+    }
+
+    public function test_voided_entries_excluded_from_balances(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $creditor = (string) Branch::query()->value('id');
+        $debtor = (string) $this->withToken($token)->postJson('/api/v1/branches', [
+            'name' => 'Void Balance Branch',
+            'is_active' => true,
+        ])->json('id');
+
+        $chargeId = (string) $this->withToken($token)->postJson('/api/v1/branch-finance/charges', [
+            'creditor_branch_id' => $creditor,
+            'debtor_branch_id' => $debtor,
+            'amount' => 600,
+        ])->json('id');
+
+        $this->withToken($token)->deleteJson("/api/v1/branch-finance/entries/{$chargeId}")->assertNoContent();
+
+        $balances = $this->withToken($token)->getJson('/api/v1/branch-finance/balances');
+        $balances->assertOk();
+        $this->assertEmpty($balances->json('balances'));
     }
 }

@@ -79,6 +79,21 @@ class BranchFinancialEntryRepository extends BaseRepository implements BranchFin
             ->where('debtor_branch_id', $debtorBranchId)
             ->where('entry_type', BranchFinancialEntryType::Charge->value)
             ->where('status', BranchFinancialEntryStatus::Open->value)
+            ->whereNull('voided_at')
+            ->orderBy('created_at')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, BranchFinancialEntry>
+     */
+    public function activePaymentsBetween(string $creditorBranchId, string $debtorBranchId): Collection
+    {
+        return $this->newQuery()
+            ->where('creditor_branch_id', $creditorBranchId)
+            ->where('debtor_branch_id', $debtorBranchId)
+            ->where('entry_type', BranchFinancialEntryType::Payment->value)
+            ->whereNull('voided_at')
             ->orderBy('created_at')
             ->get();
     }

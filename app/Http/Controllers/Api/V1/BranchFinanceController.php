@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\BranchFinance\IndexBranchFinanceRequest;
 use App\Http\Requests\Api\V1\BranchFinance\StoreBranchChargeRequest;
 use App\Http\Requests\Api\V1\BranchFinance\StoreBranchPaymentRequest;
+use App\Http\Requests\Api\V1\BranchFinance\UpdateBranchFinancialEntryRequest;
 use App\Http\Resources\BranchFinanceBalanceMatrixResource;
 use App\Http\Resources\BranchFinancialEntryResource;
 use App\Repositories\Contracts\BranchFinancialEntryRepositoryInterface;
@@ -70,5 +71,22 @@ class BranchFinanceController extends Controller
         return new BranchFinancialEntryResource(
             $this->finance->settleCharge($request->user(), $entry)
         );
+    }
+
+    public function update(UpdateBranchFinancialEntryRequest $request, string $id): BranchFinancialEntryResource
+    {
+        $entry = $this->resolveOrFail($this->entries->find($id));
+
+        return new BranchFinancialEntryResource(
+            $this->finance->updateEntry($request->user(), $entry, $request->validated())
+        );
+    }
+
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        $entry = $this->resolveOrFail($this->entries->find($id));
+        $this->finance->voidEntry($request->user(), $entry);
+
+        return response()->json(null, 204);
     }
 }

@@ -18,6 +18,7 @@ Read this page first, then open the detailed doc for each topic.
 | Weighted average cost | [flutter-weighted-average-cost.md](./flutter-weighted-average-cost.md) | Read-only cost on inventory |
 | Real cash dashboard boxes (`must_collect`, `must_pay`, `cash_on_hand`) | [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md) | New dashboard cards based on realized cash |
 | Dashboard period filter (`day` / `week` / `month`) | [flutter-dashboard-period-filter.md](./flutter-dashboard-period-filter.md) | Segmented filter on summary, sales, cash |
+| **Reverse transfer** + branch finance edit/void | [flutter-branch-transaction-edits.md](./flutter-branch-transaction-edits.md) | Admin reverse completed transfer; edit/void branch ledger |
 
 ---
 
@@ -26,7 +27,7 @@ Read this page first, then open the detailed doc for each topic.
 1. **Parse quantities as `double`** — invoices, stock, transfers, returns, 422 errors.
 2. **POS:** if `part.unit` is `m`, `kg`, or `l` → decimal keyboard; else integer only.
 3. **Transfers:** multi-line POST; optional `unit_cost`; complete with `valuation`.
-4. **Admin:** edit **pending** transfers (`PATCH /transfers/{id}`); edit **latest** customer payment (`PATCH /customers/{id}/payments/{paymentId}`).
+4. **Admin:** edit **pending** transfers (`PATCH /transfers/{id}`); edit **latest** customer payment (`PATCH /customers/{id}/payments/{paymentId}`); **reverse** completed transfers (`PATCH /transfers/{id}/reverse`); edit/void branch finance entries.
 5. **Production backend:** `php artisan migrate --force` once (decimal columns). **Never** `migrate:refresh` on production.
 6. **Delete part:** `DELETE /parts/{id}` is soft-delete (`is_active: false`). Part disappears from catalog + **inventory totals**; use `GET /parts?include_inactive=1` for archive view only.
 
@@ -40,7 +41,9 @@ Read this page first, then open the detailed doc for each topic.
 | `POST` | `/transfers` | admin/manager/warehouse | Multi-item; optional `items[].unit_cost` |
 | `PATCH` | `/transfers/{id}` | **admin** | Edit pending transfer lines |
 | `PATCH` | `/transfers/{id}/complete` | admin/manager/warehouse | Move stock; `valuation: cost\|sell` |
+| `PATCH` | `/transfers/{id}/reverse` | **admin** | Undo completed transfer + void branch charge |
 | `PATCH` | `/customers/{id}/payments/{paymentId}` | **admin** | Fix latest payment amount |
+| `PATCH` / `DELETE` | `/branch-finance/entries/{id}` | **admin** | Edit or void inter-branch ledger entry |
 
 ---
 

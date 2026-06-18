@@ -95,6 +95,36 @@ class AdminTransactionEditTest extends TestCase
         $this->assertSame('completed', StockTransfer::query()->findOrFail($transferId)->status->value);
     }
 
+    public function test_admin_can_reverse_completed_transfer(): void
+    {
+        $fromBranch = Branch::query()->firstOrFail();
+        $toBranch = Branch::query()->create(['name' => 'Reverse Smoke', 'is_active' => true]);
+
+        $partId = (string) $this->withToken($this->token)->postJson('/api/v1/parts?branch_id='.$fromBranch->id, [
+            'code' => 'REG-REV',
+            'name' => 'Reverse Smoke Part',
+            'category_key' => 'compressor',
+            'unit' => 'pc',
+            'sell_price' => 100,
+            'cost_price' => 40,
+            'min_stock' => 0,
+            'branch_id' => $fromBranch->id,
+            'initial_quantity' => 5,
+        ])->json('id');
+
+        $transferId = (string) $this->withToken($this->token)->postJson('/api/v1/transfers', [
+            'from_branch_id' => $fromBranch->id,
+            'to_branch_id' => $toBranch->id,
+            'items' => [['part_id' => $partId, 'quantity' => 1]],
+        ])->json('id');
+
+        $this->withToken($this->token)->patchJson("/api/v1/transfers/{$transferId}/complete")->assertOk();
+
+        $this->withToken($this->token)->patchJson("/api/v1/transfers/{$transferId}/reverse")
+            ->assertOk()
+            ->assertJsonPath('status', 'reversed');
+    }
+
     public function test_admin_can_edit_latest_customer_payment_amount(): void
     {
         [$customerId, $invoiceId] = $this->createCreditCustomerWithInvoice(total: 500);

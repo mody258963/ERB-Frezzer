@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\BranchFinancialEntryStatus;
 use App\Enums\BranchFinancialEntryType;
 use App\Models\BranchFinancialEntry;
+use App\Models\BranchFinancialPaymentAllocation;
 use App\Models\Part;
 use App\Models\Stock;
 use App\Models\StockTransfer;
@@ -24,6 +25,7 @@ class BranchFinanceService
         $existing = BranchFinancialEntry::query()
             ->where('reference_type', 'stock_transfer')
             ->where('reference_id', $transfer->id)
+            ->whereNull('voided_at')
             ->first();
 
         if ($existing) {
@@ -83,6 +85,93 @@ class BranchFinanceService
         $this->audit->record($user, 'branch_finance.charge', 'branch_financial_entry', $entry->id, null, $entry->toArray());
 
         return $entry->load(['creditorBranch', 'debtorBranch']);
+    }
+
+    public function voidEntryForTransfer(User $user, StockTransfer $transfer): void
+    {
+        $entry = BranchFinancialEntry::query()
+            ->where('reference_type', 'stock_transfer')
+            ->where('reference_id', $transfer->id)
+            ->whereNull('voided_at')
+            ->first();
+
+        if ($entry === null) {
+            return;
+        }
+
+        $this->voidEntry($user, $entry, allowTransferLinked: true);
+    }
+
+    /**
+     * @param  array{amount?: float|int|string, description?: ?string, notes?: ?string}  $data
+     */
+    public function updateEntry(User $user, BranchFinancialEntry $entry, array $data): BranchFinancialEntry
+    {
+        if ($entry->isVoided()) {
+            throw new \InvalidArgumentException('Voided entries cannot be edited.');
+        }
+
+        $before = $entry->toArray();
+
+        if ($entry->entry_type === BranchFinancialEntryType::Payment) {
+            return $this->updatePaymentEntry($user, $entry, $data, $before);
+        }
+
+        if ($entry->entry_type === BranchFinancialEntryType::Charge) {
+            if ($entry->status === BranchFinancialEntryStatus::Settled) {
+                throw new \InvalidArgumentException('Settled charges cannot be edited. Void the entry or reverse the payment first.');
+            }
+
+            if (array_key_exists('amount', $data)) {
+                $amount = bcadd((string) $data['amount'], '0', 2);
+                if (bccomp($amount, '0', 2) <= 0) {
+                    throw new \InvalidArgumentException('Amount must be greater than zero.');
+                }
+                $entry->amount = $amount;
+            }
+            if (array_key_exists('description', $data)) {
+                $entry->description = $data['description'];
+            }
+            if (array_key_exists('notes', $data)) {
+                $entry->notes = $data['notes'];
+            }
+
+            $this->entries->save($entry);
+            $this->audit->record($user, 'branch_finance.update', 'branch_financial_entry', $entry->id, $before, $entry->fresh()?->toArray());
+
+            return $entry->fresh(['creditorBranch', 'debtorBranch', 'creator']);
+        }
+
+        throw new \InvalidArgumentException('Unsupported entry type.');
+    }
+
+    public function voidEntry(User $user, BranchFinancialEntry $entry, bool $allowTransferLinked = false): BranchFinancialEntry
+    {
+        if ($entry->isVoided()) {
+            throw new \InvalidArgumentException('Entry is already voided.');
+        }
+
+        if ($entry->reference_type === 'stock_transfer' && ! $allowTransferLinked) {
+            throw new \InvalidArgumentException(
+                'Transfer-linked charges must be voided by reversing the stock transfer.',
+            );
+        }
+
+        $before = $entry->toArray();
+
+        DB::transaction(function () use ($user, $entry) {
+            if ($entry->entry_type === BranchFinancialEntryType::Payment) {
+                $this->reversePaymentAllocations($entry);
+            }
+
+            $entry->voided_at = now();
+            $entry->voided_by = $user->id;
+            $this->entries->save($entry);
+        });
+
+        $this->audit->record($user, 'branch_finance.void', 'branch_financial_entry', $entry->id, $before, $entry->fresh()?->toArray());
+
+        return $entry->fresh(['creditorBranch', 'debtorBranch', 'creator', 'voider']);
     }
 
     /**
@@ -147,6 +236,9 @@ class BranchFinanceService
 
     public function settleCharge(User $user, BranchFinancialEntry $entry): BranchFinancialEntry
     {
+        if ($entry->isVoided()) {
+            throw new \InvalidArgumentException('Voided entries cannot be settled.');
+        }
         if ($entry->entry_type !== BranchFinancialEntryType::Charge) {
             throw new \InvalidArgumentException('Only charge entries can be settled.');
         }
@@ -166,8 +258,6 @@ class BranchFinanceService
     }
 
     /**
-     * Net balance: positive = debtor still owes creditor.
-     *
      * @return list<array{
      *   creditor_branch_id: string,
      *   creditor_branch_name: string|null,
@@ -184,6 +274,7 @@ class BranchFinanceService
         $query = DB::table('branch_financial_entries as e')
             ->join('branches as cb', 'cb.id', '=', 'e.creditor_branch_id')
             ->join('branches as db', 'db.id', '=', 'e.debtor_branch_id')
+            ->whereNull('e.voided_at')
             ->selectRaw('e.creditor_branch_id')
             ->selectRaw('cb.name as creditor_branch_name')
             ->selectRaw('e.debtor_branch_id')
@@ -221,6 +312,45 @@ class BranchFinanceService
             ->all();
     }
 
+    /**
+     * @param  array<string, mixed>  $before
+     * @param  array{amount?: float|int|string, description?: ?string, notes?: ?string}  $data
+     */
+    private function updatePaymentEntry(
+        User $user,
+        BranchFinancialEntry $entry,
+        array $data,
+        array $before,
+    ): BranchFinancialEntry {
+        $creditorId = $entry->creditor_branch_id;
+        $debtorId = $entry->debtor_branch_id;
+
+        DB::transaction(function () use ($user, $entry, $data, $creditorId, $debtorId) {
+            $this->reversePaymentAllocations($entry);
+
+            if (array_key_exists('amount', $data)) {
+                $amount = bcadd((string) $data['amount'], '0', 2);
+                if (bccomp($amount, '0', 2) <= 0) {
+                    throw new \InvalidArgumentException('Amount must be greater than zero.');
+                }
+                $entry->amount = $amount;
+            }
+            if (array_key_exists('description', $data)) {
+                $entry->description = $data['description'];
+            }
+            if (array_key_exists('notes', $data)) {
+                $entry->notes = $data['notes'];
+            }
+
+            $this->entries->save($entry);
+            $this->reapplyPaymentsForBranchPair($creditorId, $debtorId);
+        });
+
+        $this->audit->record($user, 'branch_finance.update', 'branch_financial_entry', $entry->id, $before, $entry->fresh()?->toArray());
+
+        return $entry->fresh(['creditorBranch', 'debtorBranch', 'creator']);
+    }
+
     private function applyPaymentToOpenCharges(BranchFinancialEntry $payment): void
     {
         $remaining = (string) $payment->amount;
@@ -240,8 +370,69 @@ class BranchFinanceService
                 $charge->settled_at = $payment->settled_at ?? now();
                 $charge->settled_by = $payment->settled_by ?? $payment->created_by;
                 $this->entries->save($charge);
+
+                BranchFinancialPaymentAllocation::query()->create([
+                    'payment_entry_id' => $payment->id,
+                    'charge_entry_id' => $charge->id,
+                    'amount' => $chargeAmount,
+                ]);
+
                 $remaining = bcsub($remaining, $chargeAmount, 2);
             }
+        }
+    }
+
+    private function reversePaymentAllocations(BranchFinancialEntry $payment): void
+    {
+        $allocations = BranchFinancialPaymentAllocation::query()
+            ->where('payment_entry_id', $payment->id)
+            ->get();
+
+        foreach ($allocations as $allocation) {
+            $charge = BranchFinancialEntry::query()->lockForUpdate()->find($allocation->charge_entry_id);
+            if ($charge && ! $charge->isVoided()) {
+                $charge->status = BranchFinancialEntryStatus::Open;
+                $charge->settled_at = null;
+                $charge->settled_by = null;
+                $this->entries->save($charge);
+            }
+        }
+
+        BranchFinancialPaymentAllocation::query()
+            ->where('payment_entry_id', $payment->id)
+            ->delete();
+    }
+
+    private function reapplyPaymentsForBranchPair(string $creditorBranchId, string $debtorBranchId): void
+    {
+        $paymentIds = BranchFinancialEntry::query()
+            ->where('creditor_branch_id', $creditorBranchId)
+            ->where('debtor_branch_id', $debtorBranchId)
+            ->where('entry_type', BranchFinancialEntryType::Payment->value)
+            ->whereNull('voided_at')
+            ->pluck('id');
+
+        BranchFinancialPaymentAllocation::query()
+            ->whereIn('payment_entry_id', $paymentIds)
+            ->delete();
+
+        BranchFinancialEntry::query()
+            ->where('creditor_branch_id', $creditorBranchId)
+            ->where('debtor_branch_id', $debtorBranchId)
+            ->where('entry_type', BranchFinancialEntryType::Charge->value)
+            ->whereNull('voided_at')
+            ->where('status', BranchFinancialEntryStatus::Settled->value)
+            ->get()
+            ->each(function (BranchFinancialEntry $charge) {
+                $charge->status = BranchFinancialEntryStatus::Open;
+                $charge->settled_at = null;
+                $charge->settled_by = null;
+                $this->entries->save($charge);
+            });
+
+        $payments = $this->entries->activePaymentsBetween($creditorBranchId, $debtorBranchId);
+        foreach ($payments as $payment) {
+            $this->applyPaymentToOpenCharges($payment);
         }
     }
 }

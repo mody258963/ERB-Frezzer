@@ -81,4 +81,12 @@ class StockTransferController extends Controller
 
         return (new MessageResource(['message' => 'Cancelled.']))->response();
     }
+
+    public function reverse(Request $request, string $id): StockTransferResource
+    {
+        return new StockTransferResource($this->transferService->reverse(
+            $request->user(),
+            $this->transfers->findOrFail($id),
+        ));
+    }
 }

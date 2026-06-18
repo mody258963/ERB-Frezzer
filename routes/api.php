@@ -79,12 +79,16 @@ Route::prefix('v1')->group(function () {
         Route::put('/transfers/{id}', [StockTransferController::class, 'update'])->middleware('role:admin');
         Route::patch('/transfers/{id}/complete', [StockTransferController::class, 'complete'])->middleware('role:admin,manager,warehouse');
         Route::patch('/transfers/{id}/cancel', [StockTransferController::class, 'cancel'])->middleware('role:admin,manager');
+        Route::patch('/transfers/{id}/reverse', [StockTransferController::class, 'reverse'])->middleware('role:admin');
 
         Route::get('/branch-finance/balances', [BranchFinanceController::class, 'balances']);
         Route::get('/branch-finance/entries', [BranchFinanceController::class, 'index']);
         Route::get('/branch-finance/entries/{id}', [BranchFinanceController::class, 'show']);
         Route::post('/branch-finance/charges', [BranchFinanceController::class, 'storeCharge'])->middleware('role:admin,manager');
         Route::post('/branch-finance/payments', [BranchFinanceController::class, 'storePayment'])->middleware('role:admin,manager');
+        Route::patch('/branch-finance/entries/{id}', [BranchFinanceController::class, 'update'])->middleware('role:admin');
+        Route::put('/branch-finance/entries/{id}', [BranchFinanceController::class, 'update'])->middleware('role:admin');
+        Route::delete('/branch-finance/entries/{id}', [BranchFinanceController::class, 'destroy'])->middleware('role:admin');
         Route::patch('/branch-finance/entries/{id}/settle', [BranchFinanceController::class, 'settle'])->middleware('role:admin,manager');
 
         Route::get('/customers', [CustomerController::class, 'index']);
