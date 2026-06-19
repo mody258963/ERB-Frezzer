@@ -36,7 +36,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('return_id')->constrained('returns')->cascadeOnDelete();
             $table->foreignUuid('part_id')->constrained('parts');
-            $table->unsignedInteger('quantity');
+            $table->decimal('quantity', 12, 4);
             $table->decimal('unit_price', 12, 2);
             $table->decimal('unit_cost', 12, 2)->nullable();
             $table->string('condition', 32);

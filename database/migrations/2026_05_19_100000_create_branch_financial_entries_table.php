@@ -23,15 +23,29 @@ return new class extends Migration
             $table->foreignUuid('created_by')->constrained('users');
             $table->timestamp('settled_at')->nullable();
             $table->foreignUuid('settled_by')->nullable()->constrained('users');
+            $table->timestamp('voided_at')->nullable();
+            $table->foreignUuid('voided_by')->nullable()->constrained('users');
             $table->timestamps();
 
             $table->index(['debtor_branch_id', 'creditor_branch_id', 'status'], 'bfe_branch_pair_status_idx');
             $table->index(['reference_type', 'reference_id'], 'bfe_reference_idx');
         });
+
+        Schema::create('branch_financial_payment_allocations', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->foreignUuid('payment_entry_id')->constrained('branch_financial_entries')->cascadeOnDelete();
+            $table->foreignUuid('charge_entry_id')->constrained('branch_financial_entries')->cascadeOnDelete();
+            $table->decimal('amount', 12, 2);
+            $table->timestamps();
+
+            $table->index('payment_entry_id');
+            $table->index('charge_entry_id');
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('branch_financial_payment_allocations');
         Schema::dropIfExists('branch_financial_entries');
     }
 };

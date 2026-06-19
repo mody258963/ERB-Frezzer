@@ -29,7 +29,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('po_id')->constrained('purchase_orders')->cascadeOnDelete();
             $table->foreignUuid('part_id')->constrained('parts');
-            $table->unsignedInteger('quantity');
+            $table->decimal('quantity', 12, 4);
             $table->decimal('unit_cost', 12, 2);
             $table->decimal('total', 12, 2);
         });

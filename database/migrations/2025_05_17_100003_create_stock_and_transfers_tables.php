@@ -12,7 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('part_id')->constrained('parts')->cascadeOnDelete();
             $table->foreignUuid('branch_id')->constrained('branches')->cascadeOnDelete();
-            $table->integer('quantity')->default(0);
+            $table->decimal('quantity', 12, 4)->default(0);
             $table->decimal('average_cost', 14, 2)->default(0);
             $table->timestamps();
 
@@ -36,7 +36,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('transfer_id')->constrained('stock_transfers')->cascadeOnDelete();
             $table->foreignUuid('part_id')->constrained('parts');
-            $table->unsignedInteger('quantity');
+            $table->decimal('quantity', 12, 4);
+            $table->decimal('unit_cost', 12, 2)->nullable();
         });
     }
 
