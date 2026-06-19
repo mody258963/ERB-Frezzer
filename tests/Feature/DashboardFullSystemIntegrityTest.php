@@ -141,7 +141,7 @@ class DashboardFullSystemIntegrityTest extends TestCase
                     'branch_id' => $this->branch->id,
                 ])->assertOk(),
             );
-            $this->assertAccountingIntegrity(['business_capital' => 500000.0]);
+            $this->assertAccountingIntegrity(['business_capital' => 503000.0]);
             $this->assertEquals(3000.0, $this->stockValueAtCost());
 
             // 2) Add part + inventory adjust

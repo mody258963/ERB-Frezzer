@@ -3,17 +3,23 @@
 namespace App\Services;
 
 use App\Enums\CapitalAdjustmentType;
+use App\Enums\SettlementPaymentMethod;
 use App\Models\Branch;
 use App\Models\CapitalAdjustment;
 use App\Models\CompanySetting;
 use App\Models\Customer;
+use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Models\OwnerCashOut;
+use App\Models\ProductReturn;
+use App\Models\SaturdaySettlement;
 use App\Models\Stock;
 use App\Models\Supplier;
 use App\Models\SupplierInstallment;
+use App\Models\SupplierInstallmentPayment;
 use App\Models\User;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class CapitalService
@@ -53,8 +59,9 @@ class CapitalService
     public function showWithSnapshot(?string $branchId = null): array
     {
         $setting = $this->settings();
-        $capitalAmount = $this->capitalAmount($branchId);
-        $snapshot = $this->financingSnapshot($capitalAmount, $branchId);
+        $openingCash = $this->capitalAmount($branchId);
+        $cashSnapshot = $this->realizedCashSnapshot($openingCash, now()->startOfWeek(), now()->endOfWeek(), $branchId);
+        $snapshot = $this->financingSnapshot($openingCash, $branchId, $cashSnapshot['cash_on_hand_realized']);
         $profitSnapshot = $this->profitWithdrawalSnapshot($branchId);
 
         $branch = $branchId !== null
@@ -67,7 +74,9 @@ class CapitalService
                 'id' => $branch->id,
                 'name' => $branch->name,
             ] : null,
-            'capital_amount' => $capitalAmount,
+            'opening_cash_balance' => $openingCash,
+            'capital_amount' => $openingCash,
+            'business_capital' => $snapshot['business_capital'],
             'currency' => $setting->currency,
             'notes' => $setting->notes,
             'updated_at' => $setting->updated_at?->toIso8601String(),
@@ -212,12 +221,162 @@ class CapitalService
     }
 
     /**
-     * Rough view of how capital is deployed (no full cash ledger).
+     * رأس المال = مخزون (تكلفة) + نقد فعلي في الدرج.
+     */
+    public function businessCapitalTotal(?string $branchId = null): float
+    {
+        $openingCash = $this->capitalAmount($branchId);
+        $inventory = $this->financingSnapshot($openingCash, $branchId)['inventory_at_cost'];
+        $cashOnHand = $this->realizedCashSnapshot(
+            $openingCash,
+            now()->startOfWeek(),
+            now()->endOfWeek(),
+            $branchId,
+        )['cash_on_hand_realized'];
+
+        return (float) bcadd((string) $inventory, (string) $cashOnHand, 2);
+    }
+
+    /**
+     * Real-cash ledger. Opening cash (admin-set) + lifetime cash in − lifetime cash out.
      *
      * @return array<string, float>
      */
-    public function financingSnapshot(float $capitalAmount, ?string $branchId = null): array
-    {
+    public function realizedCashSnapshot(
+        float $openingCashBalance,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        ?string $branchId = null,
+    ): array {
+        $mustCollect = $this->scopedReceivablesTotal($branchId);
+        $mustPay = $this->scopedSupplierDebtTotal($branchId);
+
+        $cashSalesTotal = Invoice::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('payment_type', 'cash')
+            ->sum('total');
+        $cashSalesWeekly = Invoice::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('payment_type', 'cash')
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('total');
+
+        $customerPaymentsTotal = CustomerPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('customer', fn ($c) => $c->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->sum('amount');
+        $customerPaymentsWeekly = CustomerPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('customer', fn ($c) => $c->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('amount');
+
+        $settlementInTotal = SaturdaySettlement::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('invoices', fn ($i) => $i->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->sum('total_amount');
+        $settlementInWeekly = SaturdaySettlement::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('invoices', fn ($i) => $i->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('total_amount');
+
+        $supplierPaymentsTotal = SupplierInstallmentPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('installment.purchaseOrder', fn ($po) => $po->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->sum('amount');
+        $supplierPaymentsWeekly = SupplierInstallmentPayment::query()
+            ->when($branchId, fn ($q, $id) => $q->whereHas('installment.purchaseOrder', fn ($po) => $po->where('branch_id', $id)))
+            ->where('payment_method', '!=', SettlementPaymentMethod::Offset->value)
+            ->where('paid_at', '>=', $from)
+            ->where('paid_at', '<=', $to)
+            ->sum('amount');
+
+        $customerRefundsCashOutTotal = ProductReturn::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('return_type', 'customer_return')
+            ->where('status', 'completed')
+            ->whereIn('resolution', ['refund_cash', 'writeoff'])
+            ->sum('total_value');
+        $customerRefundsCashOutWeekly = ProductReturn::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('return_type', 'customer_return')
+            ->where('status', 'completed')
+            ->whereIn('resolution', ['refund_cash', 'writeoff'])
+            ->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereNotNull('completed_at')
+                        ->where('completed_at', '>=', $from)
+                        ->where('completed_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->whereNull('completed_at')
+                        ->where('updated_at', '>=', $from)
+                        ->where('updated_at', '<=', $to);
+                });
+            })
+            ->sum('total_value');
+
+        $ownerCashOutTotal = OwnerCashOut::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->sum('amount');
+        $ownerCashOutWeekly = OwnerCashOut::query()
+            ->when($branchId, fn ($q, $id) => $q->where('branch_id', $id))
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->sum('amount');
+
+        $cashInLifetime = (float) bcadd(
+            bcadd((string) $cashSalesTotal, (string) $customerPaymentsTotal, 2),
+            (string) $settlementInTotal,
+            2
+        );
+        $cashOutLifetime = (float) bcadd(
+            bcadd((string) $supplierPaymentsTotal, (string) $customerRefundsCashOutTotal, 2),
+            (string) $ownerCashOutTotal,
+            2
+        );
+        $cashOnHand = (float) bcsub(
+            bcadd((string) $openingCashBalance, (string) $cashInLifetime, 2),
+            (string) $cashOutLifetime,
+            2
+        );
+
+        $cashInWeekly = (float) bcadd(
+            bcadd((string) $cashSalesWeekly, (string) $customerPaymentsWeekly, 2),
+            (string) $settlementInWeekly,
+            2
+        );
+        $cashOutWeekly = (float) bcadd(
+            bcadd((string) $supplierPaymentsWeekly, (string) $customerRefundsCashOutWeekly, 2),
+            (string) $ownerCashOutWeekly,
+            2
+        );
+
+        return [
+            'must_collect_customers' => (float) $mustCollect,
+            'must_pay_suppliers' => (float) $mustPay,
+            'cash_on_hand_realized' => $cashOnHand,
+            'lifetime_cash_in_realized' => $cashInLifetime,
+            'lifetime_cash_out_realized' => $cashOutLifetime,
+            'period_cash_in_realized' => $cashInWeekly,
+            'period_cash_out_realized' => $cashOutWeekly,
+            'period_net_cash_flow_realized' => (float) bcsub((string) $cashInWeekly, (string) $cashOutWeekly, 2),
+        ];
+    }
+
+    /**
+     * How capital is deployed. business_capital = inventory_at_cost + cash_on_hand_realized.
+     *
+     * @return array<string, float>
+     */
+    public function financingSnapshot(
+        float $openingCashBalance,
+        ?string $branchId = null,
+        ?float $cashOnHandRealized = null,
+    ): array {
         $stockQuery = Stock::query()->forActiveParts();
         if ($branchId !== null) {
             $stockQuery->where('branch_id', $branchId);
@@ -229,19 +388,34 @@ class CapitalService
         $receivables = $this->scopedReceivablesTotal($branchId);
         $supplierDebt = $this->scopedSupplierDebtTotal($branchId);
 
+        if ($cashOnHandRealized === null) {
+            $cashOnHandRealized = $this->realizedCashSnapshot(
+                $openingCashBalance,
+                now()->startOfWeek(),
+                now()->endOfWeek(),
+                $branchId,
+            )['cash_on_hand_realized'];
+        }
+
+        $businessCapital = (float) bcadd((string) $stockAtCost, (string) $cashOnHandRealized, 2);
+
         $deployed = (float) bcadd((string) $stockAtCost, (string) $receivables, 2);
-        $estimatedAvailable = (float) bcsub(
-            bcsub((string) $capitalAmount, (string) $deployed, 2),
+        $legacyEstimatedAvailable = (float) bcsub(
+            bcsub((string) $openingCashBalance, (string) $deployed, 2),
             (string) $supplierDebt,
             2
         );
 
         return [
             'inventory_at_cost' => $stockAtCost,
+            'cash_on_hand_realized' => $cashOnHandRealized,
+            'opening_cash_balance' => $openingCashBalance,
+            'business_capital' => $businessCapital,
             'customer_receivables' => $receivables,
             'supplier_debt' => $supplierDebt,
             'deployed_capital' => $deployed,
-            'estimated_available' => $estimatedAvailable,
+            'estimated_available' => $legacyEstimatedAvailable,
+            'legacy_estimated_available' => $legacyEstimatedAvailable,
         ];
     }
 

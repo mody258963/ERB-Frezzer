@@ -83,7 +83,9 @@ class ReportQueryService
             'returns' => $returns,
             'by_branch' => $byBranch,
             'capital' => [
-                'capital_amount' => $capitalRow['capital_amount'],
+                'opening_cash_balance' => $capitalRow['opening_cash_balance'],
+                'capital_amount' => $capitalRow['business_capital'],
+                'business_capital' => $capitalRow['business_capital'],
                 'currency' => $capitalRow['currency'],
                 'financing_snapshot' => $capitalRow['financing_snapshot'],
             ],

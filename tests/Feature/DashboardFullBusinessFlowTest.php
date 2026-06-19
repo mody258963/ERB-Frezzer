@@ -109,7 +109,7 @@ class DashboardFullBusinessFlowTest extends TestCase
         ])->assertOk();
 
         $this->assertDashboard([
-            'business_capital' => 500000.0,
+            'business_capital' => 502000.0,
             'total_supplier_debt' => 0.0,
             'total_receivables' => 0.0,
         ]);
@@ -127,7 +127,7 @@ class DashboardFullBusinessFlowTest extends TestCase
         ])->assertCreated()->json('id');
 
         $this->assertDashboard([
-            'business_capital' => 500000.0,
+            'business_capital' => 502000.0,
             'total_supplier_debt' => 1000.0,
             'weekly_purchases_ordered' => 1000.0,
             'weekly_purchases_received' => 0.0,
@@ -247,7 +247,9 @@ class DashboardFullBusinessFlowTest extends TestCase
         $this->assertEquals(200.0, $report['totals']['profit']);
         $this->assertEquals(250.0, $report['suppliers']['payments_in_period']);
         $this->assertEquals(1000.0, $report['suppliers']['purchases_ordered_in_period']);
-        $this->assertEquals(500000.0, $report['capital']['capital_amount']);
+        $summary = $auth()->getJson('/api/v1/dashboard/summary')->assertOk()->json();
+        $this->assertEquals((float) $summary['business_capital'], (float) $report['capital']['business_capital']);
+        $this->assertEquals((float) $summary['business_capital'], (float) $report['capital']['capital_amount']);
     }
 
     /**

@@ -17,6 +17,7 @@ final class DashboardSummaryTransformer
             'total_supplier_debt' => (float) ($row['total_supplier_debt'] ?? 0),
             'total_stock_value_cost' => (float) ($row['total_stock_value_cost'] ?? 0),
             'business_capital' => (float) ($row['business_capital'] ?? 0),
+            'opening_cash_balance' => (float) ($row['opening_cash_balance'] ?? 0),
             'capital_currency' => $row['capital_currency'] ?? 'EGP',
             'capital_estimated_available' => (float) ($row['capital_estimated_available'] ?? 0),
             'legacy_estimated_available' => (float) ($row['legacy_estimated_available'] ?? 0),

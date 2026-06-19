@@ -39,14 +39,20 @@ final class FinancialReportTransformer
                 'supplier_value' => (float) ($returns['supplier_value'] ?? 0),
             ],
             'capital' => [
-                'capital_amount' => (float) ($capital['capital_amount'] ?? 0),
+                'opening_cash_balance' => (float) ($capital['opening_cash_balance'] ?? $capital['capital_amount'] ?? 0),
+                'capital_amount' => (float) ($capital['business_capital'] ?? $capital['capital_amount'] ?? 0),
+                'business_capital' => (float) ($capital['business_capital'] ?? $capital['capital_amount'] ?? 0),
                 'currency' => $capital['currency'] ?? 'EGP',
                 'financing_snapshot' => [
                     'inventory_at_cost' => (float) ($capitalSnapshot['inventory_at_cost'] ?? 0),
+                    'cash_on_hand_realized' => (float) ($capitalSnapshot['cash_on_hand_realized'] ?? 0),
+                    'opening_cash_balance' => (float) ($capitalSnapshot['opening_cash_balance'] ?? 0),
+                    'business_capital' => (float) ($capitalSnapshot['business_capital'] ?? 0),
                     'customer_receivables' => (float) ($capitalSnapshot['customer_receivables'] ?? 0),
                     'supplier_debt' => (float) ($capitalSnapshot['supplier_debt'] ?? 0),
                     'deployed_capital' => (float) ($capitalSnapshot['deployed_capital'] ?? 0),
-                    'estimated_available' => (float) ($capitalSnapshot['estimated_available'] ?? 0),
+                    'estimated_available' => (float) ($capitalSnapshot['legacy_estimated_available'] ?? $capitalSnapshot['estimated_available'] ?? 0),
+                    'legacy_estimated_available' => (float) ($capitalSnapshot['legacy_estimated_available'] ?? $capitalSnapshot['estimated_available'] ?? 0),
                 ],
             ],
             'suppliers' => [

@@ -13,7 +13,8 @@ class DashboardIntegrityReportWriter
 
     /** @var array<string, string> */
     private const FIELD_LABELS = [
-        'business_capital' => 'رأس مال المنشأة',
+        'business_capital' => 'رأس المال (مخزون + نقد)',
+        'opening_cash_balance' => 'رصيد النقد الافتتاحي',
         'total_stock_value_cost' => 'قيمة المخزون (بالتكلفة)',
         'must_pay_suppliers' => 'مستحق الدفع للموردين',
         'must_collect_customers' => 'مستحق التحصيل من العملاء',

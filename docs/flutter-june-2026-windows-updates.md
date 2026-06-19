@@ -18,6 +18,7 @@ Read this page first, then open the detailed doc for each topic.
 | Weighted average cost | [flutter-weighted-average-cost.md](./flutter-weighted-average-cost.md) | Read-only cost on inventory |
 | Real cash dashboard boxes (`must_collect`, `must_pay`, `cash_on_hand`) | [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md) | New dashboard cards based on realized cash |
 | Dashboard period filter (`day` / `week` / `month`) | [flutter-dashboard-period-filter.md](./flutter-dashboard-period-filter.md) | Segmented filter on summary, sales, cash |
+| **رأس المال** = مخزون + نقد (computed) | [flutter-business-capital-definition.md](./flutter-business-capital-definition.md) | Update capital card; admin sets opening cash only |
 | **Reverse transfer** + branch finance edit/void | [flutter-branch-transaction-edits.md](./flutter-branch-transaction-edits.md) | Admin reverse completed transfer; edit/void branch ledger |
 
 ---

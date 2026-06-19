@@ -67,6 +67,7 @@ class CapitalSettingsTest extends TestCase
             ->json();
 
         $this->assertEquals(100000.0, $summary['business_capital']);
+        $this->assertEquals(100000.0, $summary['opening_cash_balance']);
         $this->assertEquals('EGP', $summary['capital_currency']);
     }
 
@@ -95,7 +96,9 @@ class CapitalSettingsTest extends TestCase
             ->json();
 
         $this->assertEquals(1000.0, $show['financing_snapshot']['inventory_at_cost']);
-        $this->assertEquals(99000.0, $show['financing_snapshot']['estimated_available']);
+        $this->assertEquals(100000.0, $show['financing_snapshot']['cash_on_hand_realized']);
+        $this->assertEquals(101000.0, $show['business_capital']);
+        $this->assertEquals(101000.0, $show['financing_snapshot']['business_capital']);
     }
 
     public function test_capital_is_stored_per_branch(): void

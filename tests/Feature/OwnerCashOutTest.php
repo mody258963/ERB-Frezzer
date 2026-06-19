@@ -97,20 +97,26 @@ class OwnerCashOutTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('cash_out.amount', 15000)
-            ->assertJsonPath('capital.capital_amount', 100000)
+            ->assertJsonPath('capital.opening_cash_balance', 100000)
             ->assertJsonPath('capital.profit_withdrawal.total_withdrawn', 15000);
 
         $this->withToken($this->adminToken)
             ->getJson('/api/v1/settings/capital')
             ->assertOk()
+            ->assertJsonPath('opening_cash_balance', 100000)
             ->assertJsonPath('capital_amount', 100000)
             ->assertJsonPath('profit_withdrawal.withdrawable_profit', 5000);
 
-        $this->withToken($this->adminToken)
+        $summary = $this->withToken($this->adminToken)
             ->getJson('/api/v1/dashboard/summary')
             ->assertOk()
-            ->assertJsonPath('business_capital', 100000)
-            ->assertJsonPath('total_owner_cash_outs', 15000);
+            ->json();
+
+        $this->assertEquals(
+            (float) $summary['total_stock_value_cost'] + (float) $summary['cash_on_hand_realized'],
+            (float) $summary['business_capital'],
+        );
+        $this->assertEquals(15000.0, (float) $summary['total_owner_cash_outs']);
 
         $this->withToken($this->adminToken)
             ->getJson('/api/v1/settings/capital/cash-outs')

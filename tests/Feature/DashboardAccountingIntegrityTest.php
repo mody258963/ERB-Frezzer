@@ -137,7 +137,7 @@ class DashboardAccountingIntegrityTest extends TestCase
         ])->assertOk();
 
         $this->assertAccountingIntegrity(expectedSummary: [
-            'business_capital' => 500000.0,
+            'business_capital' => 506000.0,
             'total_supplier_debt' => 0.0,
             'total_receivables' => 0.0,
             'total_stock_value_cost' => 6000.0, // 20×100 + 100×40
@@ -316,7 +316,6 @@ class DashboardAccountingIntegrityTest extends TestCase
         $this->assertAccountingIntegrity(expectedSummary: [
             'total_owner_cash_outs' => 100.0,
             'withdrawable_profit' => 180.0,
-            'business_capital' => 500000.0,
         ]);
 
         // ── 12) Soft-delete part removes it from inventory totals ──────────
