@@ -10,17 +10,20 @@
 
 | Before (old) | After (new) |
 |--------------|-------------|
-| Cash out reduced `business_capital` | **`business_capital` stays unchanged** |
+| Cash out reduced stored `capital_amount` | **`opening_cash_balance` stays unchanged** |
 | Max amount = `capital_amount` | Max amount = **`withdrawable_profit`** |
 | Validated against capital | Validated against **realized profit − prior cash outs** |
+
+**June 2026 capital definition:** `business_capital` = مخزون + نقد. Cash out removes physical cash, so **`business_capital` and `cash_on_hand_realized` decrease**, but admin **opening cash** (`opening_cash_balance` / `capital_amount` in settings) does **not** change. See [flutter-business-capital-definition.md](./flutter-business-capital-definition.md).
 
 ---
 
 ## ⚠️ Developer warnings
 
-1. **Do not** use `capital_amount` as the max for the cash-out form anymore.
-2. **Do not** expect `business_capital` to drop after cash out — refresh `profit_withdrawal` / `withdrawable_profit` instead.
-3. **Do not** subtract cash outs from capital in local UI math.
+1. **Do not** use `capital_amount` / `opening_cash_balance` as the max for the cash-out form.
+2. **Do not** expect `opening_cash_balance` to drop after cash out — it is admin-set only.
+3. **Do** expect `business_capital` and `cash_on_hand_realized` to drop (cash left the drawer).
+4. **Do not** subtract cash outs from `opening_cash_balance` in local UI math.
 4. **Do** show a clear label: *"سحب من الأرباح"* / *"Withdraw from profit"*.
 5. If `withdrawable_profit` is `0`, disable the confirm button and explain why.
 
@@ -62,7 +65,9 @@ Also exposes:
 | `withdrawable_profit` | Same as above |
 | `realized_profit` | All-time profit |
 | `total_owner_cash_outs` | Sum withdrawn so far |
-| `business_capital` | **Unchanged** by cash out |
+| `opening_cash_balance` | **Unchanged** by cash out (admin field) |
+| `business_capital` | **Decreases** (cash component leaves drawer) |
+| `cash_on_hand_realized` | **Decreases** by cash-out amount |
 
 ### `POST /api/v1/settings/capital/cash-out`
 
@@ -75,7 +80,7 @@ Also exposes:
 }
 ```
 
-**Success:** `capital.capital_amount` is the **same** as before the withdrawal.
+**Success:** `capital.opening_cash_balance` and `capital.capital_amount` are the **same** as before. `capital.business_capital` and `financing_snapshot.cash_on_hand_realized` are **lower**.
 
 **422 example:**
 

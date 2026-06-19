@@ -144,6 +144,21 @@ After save, `business_capital` on dashboard updates because cash component chang
 
 ---
 
+## Common Flutter crashes after this change
+
+If you only see `PointerRouter` / `GestureBinding` at the bottom of the stack trace, scroll up — the real error is **above** frame #11.
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| `type 'Null' is not a subtype of type 'num'` on dashboard | Reading removed field `capital_amount` from `GET /dashboard/summary` | Use `opening_cash_balance` and `business_capital` |
+| Crash on capital save button tap | Parsing `business_capital` as `int` or `!` on nullable JSON | Use `num` → `toDouble()`, defaults `?? 0` |
+| Cash-out screen crash | `profit_withdrawal` null or nested path wrong | Always read `profit_withdrawal.withdrawable_profit` from `GET /settings/capital` |
+| UI shows wrong capital after cash out | Old logic kept `business_capital` fixed | Refresh summary; expect lower `cash_on_hand_realized`, unchanged `opening_cash_balance` |
+
+**Paste for backend support:** full exception line + frames #0–#15 + which screen/button was tapped.
+
+---
+
 ## Related docs
 
 - [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md)
