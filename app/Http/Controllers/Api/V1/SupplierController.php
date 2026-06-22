@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Concerns\ResolvesRepositoryModels;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Supplier\CollectSupplierPaymentRequest;
 use App\Http\Requests\Api\V1\Supplier\StoreSupplierRequest;
 use App\Http\Requests\Api\V1\Supplier\UpdateSupplierRequest;
 use App\Http\Resources\LinkedPartyBalanceResource;
 use App\Http\Resources\SupplierDebtResource;
+use App\Http\Resources\SupplierInstallmentPaymentResource;
+use App\Http\Resources\SupplierPaymentResource;
 use App\Http\Resources\SupplierResource;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use App\Services\ContraSettlementService;
+use App\Services\SupplierPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,6 +26,7 @@ class SupplierController extends Controller
     public function __construct(
         private SupplierRepositoryInterface $suppliers,
         private ContraSettlementService $contraSettlements,
+        private SupplierPaymentService $supplierPayments,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -71,6 +76,24 @@ class SupplierController extends Controller
 
         return new LinkedPartyBalanceResource(
             $this->contraSettlements->netBalanceForSupplier($supplier->load('linkedCustomer'))
+        );
+    }
+
+    public function collectPayment(CollectSupplierPaymentRequest $request, string $id): JsonResponse
+    {
+        $supplier = $this->resolveOrFail($this->suppliers->find($id));
+
+        return (new SupplierPaymentResource(
+            $this->supplierPayments->pay($request->user(), $supplier, $request->validated())
+        ))->response()->setStatusCode(201);
+    }
+
+    public function payments(Request $request, string $id): AnonymousResourceCollection
+    {
+        $this->resolveOrFail($this->suppliers->find($id));
+
+        return SupplierInstallmentPaymentResource::collection(
+            $this->supplierPayments->history($id, (int) $request->query('per_page', 25))
         );
     }
 }

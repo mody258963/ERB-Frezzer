@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Dashboard\BranchScopedRequest;
 use App\Http\Resources\AuditActivityRowResource;
 use App\Http\Resources\DashboardInventoryRowResource;
+use App\Http\Resources\DashboardPayablesBySupplierResource;
 use App\Http\Resources\DashboardPayablesResource;
 use App\Http\Resources\DashboardReceivableRowResource;
 use App\Http\Resources\DashboardSalesResource;
@@ -69,6 +70,13 @@ class DashboardController extends Controller
         $branchId = BranchVisibility::activeBranchId($request->user());
 
         return new DashboardPayablesResource($this->dashboard->payables($branchId));
+    }
+
+    public function payablesBySupplier(BranchScopedRequest $request): DashboardPayablesBySupplierResource
+    {
+        $branchId = BranchVisibility::activeBranchId($request->user());
+
+        return new DashboardPayablesBySupplierResource($this->dashboard->payablesBySupplier($branchId));
     }
 
     public function sales(BranchScopedRequest $request): DashboardSalesResource

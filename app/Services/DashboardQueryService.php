@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Stock;
 use App\Models\SupplierInstallment;
+use App\Repositories\Contracts\SupplierRepositoryInterface;
 use App\Support\DashboardPeriod;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,7 @@ class DashboardQueryService
         private DashboardCacheService $dashboardCache,
         private FinancialMetricsService $financialMetrics,
         private CapitalService $capital,
+        private SupplierRepositoryInterface $suppliers,
     ) {}
 
     public function summary(?string $branchId = null, ?DashboardPeriod $period = null): array
@@ -195,6 +197,14 @@ class DashboardQueryService
             'upcoming_30_days' => $upcomingQuery->get(),
             'overdue' => $overdueQuery->get(),
         ];
+    }
+
+    /**
+     * @return list<array{supplier: \App\Models\Supplier, purchase_orders: \Illuminate\Database\Eloquent\Collection, installments: \Illuminate\Database\Eloquent\Collection}>
+     */
+    public function payablesBySupplier(?string $branchId = null): array
+    {
+        return $this->suppliers->debtsWithBalance($branchId);
     }
 
     public function sales(?string $branchId = null, ?DashboardPeriod $period = null): array

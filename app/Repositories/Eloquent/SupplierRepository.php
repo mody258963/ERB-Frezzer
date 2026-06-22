@@ -78,4 +78,23 @@ class SupplierRepository extends BaseRepository implements SupplierRepositoryInt
             'installments' => $installmentQuery->orderBy('due_date')->get(),
         ];
     }
+
+    public function debtsWithBalance(?string $branchId = null): array
+    {
+        $branchId = $branchId ?? BranchVisibility::activeBranchId();
+
+        $supplierQuery = Supplier::query()
+            ->where('is_active', true)
+            ->where('total_debt', '>', 0)
+            ->orderBy('name');
+
+        if ($branchId !== null) {
+            $supplierQuery->where('branch_id', $branchId);
+        }
+
+        return $supplierQuery
+            ->get()
+            ->map(fn (Supplier $supplier) => $this->debtSnapshot($supplier->id, $branchId))
+            ->all();
+    }
 }

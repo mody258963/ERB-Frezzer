@@ -17,10 +17,19 @@ Filter dashboard metrics by **day**, **week**, or **month** using query params o
 | `period` | Range |
 |----------|--------|
 | `day` | Start of selected day → end of selected day |
-| `week` | Start of week containing `date` → end of that week |
+| `week` | **Business week:** Monday **09:00** → Friday **23:59:59** (anchor rules below) |
 | `month` | Start of month containing `date` → end of that month |
 
-Week start follows Laravel/Carbon locale (usually Monday).
+**Business week rules** (shop owner request, June 2026):
+
+- Week **starts** Monday at **09:00** (server timezone).
+- Week **ends** Friday at **23:59:59**.
+- **Saturday / Sunday:** API returns the week that **ended last Friday**.
+- **Monday before 09:00:** still in the **previous** business week.
+
+Do **not** compute week boundaries in Flutter — read `period.from` and `period.to` from the response.
+
+See [flutter-client-requests-june-2026-shop-owner.md](./flutter-client-requests-june-2026-shop-owner.md).
 
 ---
 
@@ -150,3 +159,10 @@ Refresh after any transaction that changes money:
 - [ ] `must_collect_customers` unchanged when switching period (obligations, not period metrics)
 - [ ] `cash_on_hand_realized` unchanged when switching period (lifetime cash)
 - [ ] Sales screen uses same `period` param as summary
+
+---
+
+## See also
+
+- [flutter-dashboard-period-numbers-validation.md](./flutter-dashboard-period-numbers-validation.md) — field mapping, formulas, screenshot QA, and common Flutter mistakes when binding day/week/month numbers
+- [flutter-client-requests-june-2026-shop-owner.md](./flutter-client-requests-june-2026-shop-owner.md) — supplier lump-sum pay, business week Mon 9 AM–Fri, daily drawer

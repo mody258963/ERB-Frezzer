@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\InvoicePaymentType;
-use App\Enums\PurchaseOrderStatus;
 use App\Enums\SettlementPaymentMethod;
 use App\Models\ContraSettlement;
 use App\Models\Customer;
@@ -11,8 +10,6 @@ use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
-use App\Models\SupplierInstallment;
-use App\Models\SupplierInstallmentPayment;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -257,73 +254,12 @@ class ContraSettlementService
 
     private function applySupplierOffset(User $user, Supplier $supplier, string $amount, string $notes): void
     {
-        $remaining = $amount;
-        $method = SettlementPaymentMethod::Offset;
-        $paidAt = now();
-
-        $installments = SupplierInstallment::query()
-            ->where('supplier_id', $supplier->id)
-            ->where('is_paid', false)
-            ->orderBy('due_date')
-            ->orderBy('installment_no')
-            ->lockForUpdate()
-            ->get();
-
-        foreach ($installments as $inst) {
-            if (bccomp($remaining, '0', 2) <= 0) {
-                break;
-            }
-
-            $due = $inst->balanceDue();
-            if (bccomp($due, '0', 2) <= 0) {
-                continue;
-            }
-
-            $apply = bccomp($remaining, $due, 2) >= 0 ? $due : $remaining;
-
-            SupplierInstallmentPayment::query()->create([
-                'installment_id' => $inst->id,
-                'supplier_id' => $supplier->id,
-                'po_id' => $inst->po_id,
-                'amount' => $apply,
-                'payment_method' => $method,
-                'paid_by' => $user->id,
-                'notes' => $notes,
-                'paid_at' => $paidAt,
-            ]);
-
-            $inst->amount_paid = bcadd((string) $inst->amount_paid, $apply, 2);
-            $inst->payment_method = $method;
-            $inst->paid_by = $user->id;
-            $inst->notes = $notes;
-
-            if (bccomp($inst->balanceDue(), '0', 2) <= 0) {
-                $inst->is_paid = true;
-                $inst->paid_at = $paidAt;
-            } else {
-                $inst->is_paid = false;
-                $inst->paid_at = null;
-            }
-
-            $inst->save();
-
-            $po = PurchaseOrder::query()->lockForUpdate()->findOrFail($inst->po_id);
-            $po->amount_paid = bcadd((string) $po->amount_paid, $apply, 2);
-
-            if (bccomp((string) $po->amount_paid, (string) $po->total_amount, 2) >= 0) {
-                $po->status = PurchaseOrderStatus::Settled->value;
-            } elseif (bccomp((string) $po->amount_paid, '0', 2) > 0) {
-                $po->status = PurchaseOrderStatus::Partial->value;
-            }
-
-            $po->save();
-            $remaining = bcsub($remaining, $apply, 2);
-        }
-
-        $supplier->total_debt = bcsub((string) $supplier->total_debt, $amount, 2);
-        if (bccomp((string) $supplier->total_debt, '0', 2) < 0) {
-            $supplier->total_debt = '0.00';
-        }
-        $supplier->save();
+        app(SupplierInstallmentAllocationService::class)->allocate(
+            $user,
+            $supplier,
+            $amount,
+            SettlementPaymentMethod::Offset,
+            $notes,
+        );
     }
 }

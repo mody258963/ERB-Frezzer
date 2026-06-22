@@ -30,7 +30,7 @@ final class DashboardPeriod
         [$from, $to] = match ($key) {
             self::DAY => [$anchor->copy()->startOfDay(), $anchor->copy()->endOfDay()],
             self::MONTH => [$anchor->copy()->startOfMonth(), $anchor->copy()->endOfMonth()],
-            default => [$anchor->copy()->startOfWeek(), $anchor->copy()->endOfWeek()],
+            default => BusinessWeek::containing($anchor),
         };
 
         return new self($key, $from, $to, $anchor->toDateString());

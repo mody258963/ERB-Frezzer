@@ -125,6 +125,8 @@ Route::prefix('v1')->group(function () {
         Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->middleware('role:admin');
         Route::get('/suppliers/{id}/debt', [SupplierController::class, 'debt']);
         Route::get('/suppliers/{id}/linked-balance', [SupplierController::class, 'linkedBalance']);
+        Route::post('/suppliers/{id}/payments', [SupplierController::class, 'collectPayment'])->middleware('role:admin,manager');
+        Route::get('/suppliers/{id}/payments', [SupplierController::class, 'payments']);
 
         Route::get('/purchases', [PurchaseController::class, 'index']);
         Route::post('/purchases', [PurchaseController::class, 'store'])->middleware('role:admin,manager');
@@ -149,6 +151,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/inventory', [DashboardController::class, 'inventory']);
             Route::get('/receivables', [DashboardController::class, 'receivables']);
             Route::get('/payables', [DashboardController::class, 'payables']);
+            Route::get('/payables/by-supplier', [DashboardController::class, 'payablesBySupplier']);
             Route::get('/sales', [DashboardController::class, 'sales']);
             Route::get('/activity', [DashboardController::class, 'activity']);
         });

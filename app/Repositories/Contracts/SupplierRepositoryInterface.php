@@ -19,5 +19,10 @@ interface SupplierRepositoryInterface
     /**
      * @return array{supplier: Supplier, purchase_orders: \Illuminate\Database\Eloquent\Collection, installments: \Illuminate\Database\Eloquent\Collection}
      */
-    public function debtSnapshot(string $supplierId): array;
+    public function debtSnapshot(string $supplierId, ?string $branchId = null): array;
+
+    /**
+     * @return list<array{supplier: Supplier, purchase_orders: \Illuminate\Database\Eloquent\Collection, installments: \Illuminate\Database\Eloquent\Collection}>
+     */
+    public function debtsWithBalance(?string $branchId = null): array;
 }

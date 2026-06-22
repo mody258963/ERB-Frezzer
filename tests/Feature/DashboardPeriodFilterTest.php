@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Part;
 use App\Models\PartCategory;
 use App\Models\Stock;
+use Carbon\Carbon;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PartCategorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,6 +40,8 @@ class DashboardPeriodFilterTest extends TestCase
 
     public function test_dashboard_summary_filters_by_day_week_and_month(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-06-18 12:00:00'));
+
         [$customerId, $partId] = $this->seedSaleFixtures();
 
         $this->withToken($this->token)->postJson('/api/v1/invoices', [
@@ -74,6 +77,8 @@ class DashboardPeriodFilterTest extends TestCase
 
         $this->assertSame('month', $month['period']['key']);
         $this->assertEquals(400.0, $month['period_revenue']);
+
+        Carbon::setTestNow();
     }
 
     public function test_dashboard_day_filter_excludes_sales_outside_selected_date(): void
@@ -140,6 +145,43 @@ class DashboardPeriodFilterTest extends TestCase
 
         $this->assertSame('day', $cash['period']['key']);
         $this->assertEquals(200.0, $cash['period_cash_in_realized']);
+    }
+
+    public function test_dashboard_week_uses_business_week_monday_nine_to_friday_end(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-18 12:00:00'));
+
+        [$customerId, $partId] = $this->seedSaleFixtures();
+
+        $this->withToken($this->token)->postJson('/api/v1/invoices', [
+            'customer_id' => $customerId,
+            'branch_id' => $this->branch->id,
+            'payment_type' => 'cash',
+            'items' => [['part_id' => $partId, 'quantity' => 1]],
+        ])->assertCreated();
+
+        Invoice::query()->update(['created_at' => Carbon::parse('2026-06-15 08:00:00')]);
+
+        $this->withToken($this->token)->postJson('/api/v1/invoices', [
+            'customer_id' => $customerId,
+            'branch_id' => $this->branch->id,
+            'payment_type' => 'cash',
+            'items' => [['part_id' => $partId, 'quantity' => 1]],
+        ])->assertCreated();
+
+        Cache::flush();
+
+        $week = $this->withToken($this->token)
+            ->getJson('/api/v1/dashboard/summary?period=week&date=2026-06-18')
+            ->assertOk()
+            ->json();
+
+        $this->assertSame('week', $week['period']['key']);
+        $this->assertStringContainsString('2026-06-15T09:00:00', $week['period']['from']);
+        $this->assertStringContainsString('2026-06-19T23:59:59', $week['period']['to']);
+        $this->assertEquals(200.0, $week['period_revenue']);
+
+        Carbon::setTestNow();
     }
 
     /**

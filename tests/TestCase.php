@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Carbon\Carbon;
 use Database\Seeders\PassportClientSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Schema;
@@ -12,6 +13,8 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        Carbon::setTestNow(Carbon::parse('2026-06-18 12:00:00'));
+
         if (! Schema::hasTable('oauth_clients')) {
             return;
         }
@@ -21,5 +24,12 @@ abstract class TestCase extends BaseTestCase
         }
 
         $this->seed(PassportClientSeeder::class);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 }
