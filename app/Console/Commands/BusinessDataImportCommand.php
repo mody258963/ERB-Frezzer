@@ -11,7 +11,7 @@ class BusinessDataImportCommand extends Command
                             {--path= : JSON snapshot path (default: database/snapshots/business-data.json)}
                             {--force : Skip confirmation}';
 
-    protected $description = 'Import business data snapshot after migrate:fresh --seed';
+    protected $description = 'Import catalog snapshot (parts, stock, customers, suppliers) after migrate:fresh --seed';
 
     public function handle(BusinessDataSnapshotService $snapshots): int
     {

@@ -13,38 +13,23 @@ class BusinessDataSnapshotService
 {
     public const DEFAULT_PATH = 'database/snapshots/business-data.json';
 
+    public const SCHEMA = 'catalog-only-v2';
+
     /**
-     * Tables in FK-safe export order (parents before children).
+     * Catalog-only export: parts, warehouse stock, customers (name + type), suppliers.
+     * Users, branches, and categories come from migrate:fresh --seed.
      *
      * @var list<string>
      */
     private const EXPORT_TABLES = [
-        'branches',
-        'part_categories',
         'parts',
         'stock',
         'customers',
         'suppliers',
-        'company_settings',
-        'capital_adjustments',
-        'owner_cash_outs',
-        'saturday_settlements',
-        'customer_payments',
-        'purchase_orders',
-        'purchase_order_items',
-        'supplier_installments',
-        'supplier_installment_payments',
-        'invoices',
-        'invoice_items',
-        'returns',
-        'return_items',
-        'stock_transfers',
-        'stock_transfer_items',
-        'contra_settlements',
     ];
 
     /**
-     * Reverse order for wiping before import.
+     * Wipe order: transactions first, then catalog rows we re-import.
      *
      * @var list<string>
      */
@@ -74,9 +59,6 @@ class BusinessDataSnapshotService
     /** @var array<string, string> */
     private array $branchMap = [];
 
-    /** @var array<string, string> */
-    private array $categoryMap = [];
-
     private ?string $adminUserId = null;
 
     public function export(string $path = self::DEFAULT_PATH): string
@@ -87,21 +69,21 @@ class BusinessDataSnapshotService
         $payload = [
             'exported_at' => now()->toIso8601String(),
             'app' => 'ERB-Frezzer',
-            'tables' => [],
-        ];
-
-        foreach (self::EXPORT_TABLES as $table) {
-            if (! Schema::hasTable($table)) {
-                continue;
-            }
-
-            $payload['tables'][$table] = DB::table($table)
-                ->orderBy('id')
+            'schema' => self::SCHEMA,
+            'branch_mapping' => DB::table('branches')
+                ->select('id', 'name')
+                ->orderBy('name')
                 ->get()
-                ->map(fn ($row) => (array) $row)
+                ->map(fn ($row) => ['id' => (string) $row->id, 'name' => $row->name])
                 ->values()
-                ->all();
-        }
+                ->all(),
+            'tables' => [
+                'parts' => $this->exportParts(),
+                'stock' => $this->exportStock(),
+                'customers' => $this->exportCustomers(),
+                'suppliers' => $this->exportSuppliers(),
+            ],
+        ];
 
         File::put(
             $absolute,
@@ -120,6 +102,14 @@ class BusinessDataSnapshotService
         }
 
         $payload = json_decode(File::get($absolute), true, 512, JSON_THROW_ON_ERROR);
+        $schema = $payload['schema'] ?? 'legacy-full';
+
+        if ($schema !== self::SCHEMA) {
+            throw new \RuntimeException(
+                'Snapshot uses an old full-data format. Re-export with: php artisan business-data:export',
+            );
+        }
+
         $tables = $payload['tables'] ?? [];
 
         if ($tables === []) {
@@ -131,85 +121,153 @@ class BusinessDataSnapshotService
             throw new \RuntimeException('Admin user not found. Run: php artisan migrate:fresh --seed');
         }
 
-        DB::transaction(function () use ($tables) {
-            $this->withoutForeignKeyChecks(function () use ($tables) {
+        DB::transaction(function () use ($tables, $payload) {
+            $this->withoutForeignKeyChecks(function () use ($tables, $payload) {
                 $this->wipeBusinessTables();
-                $this->importBranches($tables['branches'] ?? []);
-                $this->importPartCategories($tables['part_categories'] ?? []);
+                $this->initBranchMap($payload['branch_mapping'] ?? []);
                 $this->importParts($tables['parts'] ?? []);
                 $this->importSimple('stock', $tables['stock'] ?? [], ['part_id', 'branch_id']);
                 $this->importCustomers($tables['customers'] ?? []);
-                $this->importSimple('suppliers', $tables['suppliers'] ?? [], ['branch_id']);
-                $this->importSimple('company_settings', $tables['company_settings'] ?? [], [], remapUser: ['updated_by']);
-                $this->importSimple('capital_adjustments', $tables['capital_adjustments'] ?? [], ['branch_id'], remapUser: ['created_by']);
-                $this->importSimple('owner_cash_outs', $tables['owner_cash_outs'] ?? [], ['branch_id'], remapUser: ['created_by']);
-                $this->importSimple('saturday_settlements', $tables['saturday_settlements'] ?? [], ['customer_id'], remapUser: ['created_by']);
-                $this->importSimple('customer_payments', $tables['customer_payments'] ?? [], ['customer_id'], remapUser: ['created_by']);
-                $this->importSimple('purchase_orders', $tables['purchase_orders'] ?? [], ['supplier_id', 'branch_id'], remapUser: ['created_by']);
-                $this->importSimple('purchase_order_items', $tables['purchase_order_items'] ?? [], ['purchase_order_id', 'part_id']);
-                $this->importSimple('supplier_installments', $tables['supplier_installments'] ?? [], ['purchase_order_id']);
-                $this->importSimple('supplier_installment_payments', $tables['supplier_installment_payments'] ?? [], ['installment_id'], remapUser: ['created_by']);
-                $this->importSimple('invoices', $tables['invoices'] ?? [], ['customer_id', 'branch_id', 'settlement_id'], remapUser: ['created_by']);
-                $this->importSimple('invoice_items', $tables['invoice_items'] ?? [], ['invoice_id', 'part_id']);
-                $this->importSimple('returns', $tables['returns'] ?? [], ['customer_id', 'supplier_id', 'branch_id', 'reference_id'], remapUser: ['created_by', 'approved_by']);
-                $this->importSimple('return_items', $tables['return_items'] ?? [], ['return_id', 'part_id']);
-                $this->importSimple('stock_transfers', $tables['stock_transfers'] ?? [], ['from_branch_id', 'to_branch_id'], remapUser: ['created_by']);
-                $this->importSimple('stock_transfer_items', $tables['stock_transfer_items'] ?? [], ['transfer_id', 'part_id']);
-                $this->importSimple('contra_settlements', $tables['contra_settlements'] ?? [], ['customer_id', 'supplier_id'], remapUser: ['created_by']);
+                $this->importSuppliers($tables['suppliers'] ?? []);
             });
         });
     }
 
     /**
-     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
      */
-    private function importBranches(array $rows): void
+    private function exportParts(): array
     {
-        foreach ($rows as $row) {
-            $oldId = (string) $row['id'];
-            $existing = Branch::query()->where('name', $row['name'])->first();
-
-            if ($existing) {
-                $existing->fill([
-                    'address' => $row['address'] ?? null,
-                    'phone' => $row['phone'] ?? null,
-                    'is_active' => (bool) ($row['is_active'] ?? true),
-                    'capital_amount' => $row['capital_amount'] ?? 0,
-                ]);
-                $existing->save();
-                $this->branchMap[$oldId] = $existing->id;
-            } else {
-                Branch::query()->insert([
-                    'id' => $oldId,
-                    'name' => $row['name'],
-                    'address' => $row['address'] ?? null,
-                    'phone' => $row['phone'] ?? null,
-                    'is_active' => (bool) ($row['is_active'] ?? true),
-                    'capital_amount' => $row['capital_amount'] ?? 0,
-                    'created_at' => $row['created_at'] ?? now(),
-                    'updated_at' => $row['updated_at'] ?? now(),
-                ]);
-                $this->branchMap[$oldId] = $oldId;
-            }
+        if (! Schema::hasTable('parts')) {
+            return [];
         }
+
+        return DB::table('parts')
+            ->join('part_categories', 'part_categories.id', '=', 'parts.category_id')
+            ->select([
+                'parts.id',
+                'parts.code',
+                'parts.name',
+                'part_categories.key as category_key',
+                'parts.unit',
+                'parts.sell_price',
+                'parts.cost_price',
+                'parts.min_stock',
+                'parts.is_active',
+                'parts.branch_id',
+                'parts.image_path',
+                'parts.created_at',
+                'parts.updated_at',
+            ])
+            ->orderBy('parts.code')
+            ->get()
+            ->map(fn ($row) => (array) $row)
+            ->values()
+            ->all();
     }
 
     /**
-     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
      */
-    private function importPartCategories(array $rows): void
+    private function exportStock(): array
     {
-        foreach ($rows as $row) {
-            $oldId = (string) $row['id'];
-            $category = PartCategory::query()->firstOrCreate(
-                ['key' => $row['key']],
-                [
-                    'name' => $row['name'],
-                    'sort_order' => $row['sort_order'] ?? 0,
-                    'is_active' => (bool) ($row['is_active'] ?? true),
-                ]
-            );
-            $this->categoryMap[$oldId] = $category->id;
+        if (! Schema::hasTable('stock')) {
+            return [];
+        }
+
+        return DB::table('stock')
+            ->select(['id', 'part_id', 'branch_id', 'quantity', 'average_cost', 'created_at', 'updated_at'])
+            ->orderBy('part_id')
+            ->get()
+            ->map(fn ($row) => (array) $row)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function exportCustomers(): array
+    {
+        if (! Schema::hasTable('customers')) {
+            return [];
+        }
+
+        return DB::table('customers')
+            ->select([
+                'id',
+                'name',
+                'type',
+                'phone',
+                'address',
+                'credit_limit',
+                'branch_id',
+                'is_active',
+                'created_at',
+                'updated_at',
+            ])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($row) {
+                $data = (array) $row;
+                $data['outstanding_balance'] = '0.00';
+                $data['last_settled_at'] = null;
+                $data['linked_supplier_id'] = null;
+
+                if (($data['type'] ?? '') === 'cash') {
+                    $data['credit_limit'] = '0.00';
+                }
+
+                return $data;
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function exportSuppliers(): array
+    {
+        if (! Schema::hasTable('suppliers')) {
+            return [];
+        }
+
+        return DB::table('suppliers')
+            ->select([
+                'id',
+                'name',
+                'phone',
+                'address',
+                'branch_id',
+                'is_active',
+                'created_at',
+                'updated_at',
+            ])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($row) {
+                $data = (array) $row;
+                $data['total_debt'] = '0.00';
+
+                return $data;
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<array{id: string, name: string}>  $mapping
+     */
+    private function initBranchMap(array $mapping): void
+    {
+        $this->branchMap = [];
+
+        foreach ($mapping as $row) {
+            $branch = Branch::query()->where('name', $row['name'])->first();
+            if ($branch) {
+                $this->branchMap[(string) $row['id']] = $branch->id;
+            }
         }
     }
 
@@ -219,39 +277,39 @@ class BusinessDataSnapshotService
     private function importParts(array $rows): void
     {
         foreach ($rows as $row) {
-            $row['category_id'] = $this->categoryMap[(string) $row['category_id']] ?? $row['category_id'];
+            $categoryKey = $row['category_key'] ?? null;
+            unset($row['category_key']);
+
+            if ($categoryKey !== null) {
+                $categoryId = PartCategory::query()->where('key', $categoryKey)->value('id');
+                if ($categoryId === null) {
+                    throw new \RuntimeException("Part category not found in seed: {$categoryKey}");
+                }
+                $row['category_id'] = $categoryId;
+            }
+
             if (! empty($row['branch_id'])) {
                 $row['branch_id'] = $this->branchMap[(string) $row['branch_id']] ?? $row['branch_id'];
             }
+
             DB::table('parts')->insert($row);
         }
     }
 
     /**
      * @param  list<array<string, mixed>>  $rows
-     * @param  list<string>  $branchFkColumns
-     * @param  list<string>  $remapUser
+     * @param  list<string>  $fkColumns
      */
-    private function importSimple(
-        string $table,
-        array $rows,
-        array $branchFkColumns = [],
-        array $remapUser = [],
-    ): void {
+    private function importSimple(string $table, array $rows, array $fkColumns = []): void
+    {
         if ($rows === [] || ! Schema::hasTable($table)) {
             return;
         }
 
         foreach ($rows as $row) {
-            foreach ($branchFkColumns as $column) {
+            foreach ($fkColumns as $column) {
                 if (! empty($row[$column]) && isset($this->branchMap[(string) $row[$column]])) {
                     $row[$column] = $this->branchMap[(string) $row[$column]];
-                }
-            }
-
-            foreach ($remapUser as $column) {
-                if (! empty($row[$column])) {
-                    $row[$column] = $this->adminUserId;
                 }
             }
 
@@ -269,17 +327,31 @@ class BusinessDataSnapshotService
                 $row['branch_id'] = $this->branchMap[(string) $row['branch_id']] ?? $row['branch_id'];
             }
 
-            DB::table('customers')->insert($row);
-        }
+            $row['outstanding_balance'] = '0.00';
+            $row['last_settled_at'] = null;
+            $row['linked_supplier_id'] = null;
 
-        foreach ($rows as $row) {
-            if (empty($row['linked_supplier_id'])) {
-                continue;
+            if (($row['type'] ?? '') === 'cash') {
+                $row['credit_limit'] = '0.00';
             }
 
-            DB::table('customers')
-                ->where('id', $row['id'])
-                ->update(['linked_supplier_id' => $row['linked_supplier_id']]);
+            DB::table('customers')->insert($row);
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function importSuppliers(array $rows): void
+    {
+        foreach ($rows as $row) {
+            if (! empty($row['branch_id'])) {
+                $row['branch_id'] = $this->branchMap[(string) $row['branch_id']] ?? $row['branch_id'];
+            }
+
+            $row['total_debt'] = '0.00';
+
+            DB::table('suppliers')->insert($row);
         }
     }
 

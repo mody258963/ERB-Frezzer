@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Part;
 use App\Models\PartCategory;
 use App\Models\Stock;
@@ -27,7 +28,7 @@ class BusinessDataSnapshotTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_export_and_import_round_trip_restores_business_data(): void
+    public function test_export_and_import_round_trip_restores_catalog_only(): void
     {
         $this->seed(DatabaseSeeder::class);
         $this->seed(PartCategorySeeder::class);
@@ -70,13 +71,8 @@ class BusinessDataSnapshotTest extends TestCase
             'branch_id' => $branch->id,
         ]);
 
-        $branch->capital_amount = 100000;
-        $branch->save();
-
         $service = app(BusinessDataSnapshotService::class);
         $service->export($this->snapshotPath);
-
-        $this->assertGreaterThan(0, Part::query()->count());
 
         Part::query()->create([
             'code' => 'JUNK-1',
@@ -97,8 +93,30 @@ class BusinessDataSnapshotTest extends TestCase
         $restoredPart = Part::query()->where('code', 'SNAP-1')->firstOrFail();
         $this->assertSame(1, Part::query()->count());
         $this->assertSame(25.0, (float) Stock::query()->where('part_id', $restoredPart->id)->value('quantity'));
-        $this->assertSame(150.0, (float) Customer::query()->where('name', 'Snapshot Customer')->value('outstanding_balance'));
-        $this->assertSame(300.0, (float) Supplier::query()->where('name', 'Snapshot Supplier')->value('total_debt'));
-        $this->assertEquals(100000.0, (float) Branch::query()->where('name', 'Main Branch')->value('capital_amount'));
+
+        $customer = Customer::query()->where('name', 'Snapshot Customer')->firstOrFail();
+        $this->assertSame('credit', $customer->type->value);
+        $this->assertEquals(0.0, (float) $customer->outstanding_balance);
+
+        $supplier = Supplier::query()->where('name', 'Snapshot Supplier')->firstOrFail();
+        $this->assertEquals(0.0, (float) $supplier->total_debt);
+
+        $this->assertSame(0, Invoice::query()->count());
+    }
+
+    public function test_import_rejects_legacy_full_snapshot_format(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        File::ensureDirectoryExists(base_path('database/snapshots'));
+        File::put(base_path($this->snapshotPath), json_encode([
+            'schema' => 'legacy-full',
+            'tables' => ['parts' => []],
+        ]));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('old full-data format');
+
+        app(BusinessDataSnapshotService::class)->import($this->snapshotPath);
     }
 }

@@ -1,29 +1,29 @@
-# Server: backup & restore business data (after migrate:fresh)
+# Server: backup & restore catalog data (after migrate:fresh)
 
-Use this on the **production/staging server** when you need to run migrations from scratch but keep your real data (parts, stock, customers, suppliers, invoices, finance).
+Use this on the **production/staging server** when you need to run migrations from scratch but keep your **catalog** data — not invoices or finance history.
 
 ---
 
 ## What gets exported / restored
 
-| Data | Included |
-|------|----------|
-| Branches + capital | ✅ |
-| Parts (catalog) | ✅ |
-| Warehouse stock (quantities) | ✅ |
-| Customers + balances | ✅ |
-| Suppliers + debt | ✅ |
-| Invoices + items | ✅ |
-| Purchases + installments + payments | ✅ |
-| Returns | ✅ |
-| Stock transfers | ✅ |
-| Branch finance entries | ❌ excluded |
-| Capital adjustments + owner cash-outs | ✅ |
-| Customer payments + settlements | ✅ |
+| Data | Included | Notes |
+|------|----------|--------|
+| Parts (catalog) | ✅ | code, name, prices, category, etc. |
+| Warehouse stock | ✅ | quantities + average cost per branch |
+| Customers | ✅ | **name, type (cash/credit), contact** — balances reset to **0** |
+| Suppliers | ✅ | **name, contact** — debt reset to **0** |
+| Users + passwords | ❌ | From `migrate:fresh --seed` (admin@example.com) |
+| Branches | ❌ | From seed — matched **by name** for stock/part branch links |
+| Part categories | ❌ | From `PartCategorySeeder` |
+| Invoices | ❌ | |
+| Purchases / installments / payments | ❌ | |
+| Returns | ❌ | |
+| Customer payments / settlements | ❌ | |
+| Capital / owner cash-outs | ❌ | |
+| Stock transfers | ❌ | |
+| Audit logs | ❌ | |
 
-**Not included:** users, passwords, OAuth tokens, audit logs, stock movement history.
-
-After import, login still works with **admin@example.com** / **password** (from seeder) unless you changed users manually.
+**Purpose:** Clean migration with a fresh financial slate while keeping your product catalog, warehouse quantities, customer/supplier directory, and credit vs cash customer type.
 
 ---
 
@@ -34,25 +34,23 @@ After import, login still works with **admin@example.com** / **password** (from 
 ```bash
 cd /path/to/ERB-Frezzer
 
-# JSON snapshot (app export)
 php artisan business-data:export
 
-# Optional: full MySQL dump
+# Optional: full MySQL dump (only way to keep invoices/history)
 mysqldump -u YOUR_USER -p YOUR_DATABASE > backup-$(date +%Y%m%d-%H%M).sql
 ```
 
 Snapshot file: `database/snapshots/business-data.json`
 
-**Download a copy** to your PC before step 3:
+**Download a copy** before migrate:fresh:
 
 ```bash
-# from your local machine
 scp user@server:/path/to/ERB-Frezzer/database/snapshots/business-data.json .
 ```
 
 ---
 
-### 2) Put app in maintenance mode (optional)
+### 2) Maintenance mode (optional)
 
 ```bash
 php artisan down
@@ -66,21 +64,20 @@ php artisan down
 php artisan migrate:fresh --seed --force
 ```
 
-This recreates tables and seeds:
-- Main Branch
+Recreates tables and seeds:
+
+- Main Branch (keep the **same branch name** as before)
 - Admin user
 - Part categories
 - Passport client
 
 ---
 
-### 4) Restore your business data
+### 4) Restore catalog data
 
 ```bash
 php artisan business-data:import --force
 ```
-
-You will see a table of row counts from the snapshot, then data is restored.
 
 ---
 
@@ -120,15 +117,16 @@ php artisan business-data:import --path=storage/app/my-backup.json --force
 |---------|-----|
 | `Snapshot not found` | Run `business-data:export` first |
 | `Admin user not found` | Run `migrate:fresh --seed` before import |
-| Import fails on FK | Ensure MySQL user can run migrations; retry import |
-| Branch names changed | Branches are matched **by name**; keep names stable |
+| `old full-data format` | Re-export with current app (`catalog-only-v2` schema) |
+| `Part category not found in seed` | Add category to seeder or fix part category keys |
+| Branch stock wrong branch | Branch names in DB must match snapshot mapping — keep names stable |
 
 ---
 
 ## When NOT to use migrate:fresh on production
 
 - Normal deploys: use `php artisan migrate --force` only.
-- `migrate:fresh` **drops all tables** — always export + mysqldump first.
+- `migrate:fresh` **drops all tables** — always export + mysqldump first if you need invoice history.
 
 ---
 
@@ -138,8 +136,9 @@ php artisan business-data:import --path=storage/app/my-backup.json --force
 php artisan tinker
 >>> \App\Models\Part::count()
 >>> \App\Models\Stock::sum('quantity')
->>> \App\Models\Customer::sum('outstanding_balance')
->>> \App\Models\Supplier::sum('total_debt')
+>>> \App\Models\Customer::count()
+>>> \App\Models\Supplier::count()
+>>> \App\Models\Invoice::count()   // should be 0
 ```
 
-Or check dashboard in the app.
+Or check dashboard — profit, invoices, and debts should start clean.

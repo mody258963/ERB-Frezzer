@@ -10,7 +10,7 @@ class BusinessDataExportCommand extends Command
     protected $signature = 'business-data:export
                             {--path= : Output JSON path (default: database/snapshots/business-data.json)}';
 
-    protected $description = 'Export parts, stock, customers, suppliers, and finance data to JSON';
+    protected $description = 'Export catalog snapshot: parts, stock, customers (name/type), suppliers';
 
     public function handle(BusinessDataSnapshotService $snapshots): int
     {
