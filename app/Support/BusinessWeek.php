@@ -6,8 +6,8 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
 /**
- * Shop business week: Monday 09:00 through Friday 23:59:59.
- * Saturday/Sunday show the week that ended the previous Friday night.
+ * Shop business week: Monday 09:00 through Saturday 23:59:59.
+ * Sunday (and after Saturday close) shows the week that ended last Saturday night.
  */
 final class BusinessWeek
 {
@@ -28,15 +28,15 @@ final class BusinessWeek
             ->startOfWeek(Carbon::MONDAY)
             ->setTime($startHour, 0, 0);
 
-        $fridayEnd = $mondayNine->copy()->addDays(4)->endOfDay();
+        $saturdayEnd = $mondayNine->copy()->addDays(5)->endOfDay();
 
         if ($anchor->lt($mondayNine)) {
             $mondayNine->subWeek();
-            $fridayEnd = $mondayNine->copy()->addDays(4)->endOfDay();
-        } elseif ($anchor->gt($fridayEnd)) {
-            // Saturday/Sunday (or after Friday close): completed week ending last Friday.
+            $saturdayEnd = $mondayNine->copy()->addDays(5)->endOfDay();
+        } elseif ($anchor->gt($saturdayEnd)) {
+            // Sunday (or after Saturday close): completed week ending last Saturday.
         }
 
-        return [$mondayNine, $fridayEnd];
+        return [$mondayNine, $saturdayEnd];
     }
 }

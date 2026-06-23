@@ -17,7 +17,7 @@ Filter dashboard metrics by **day**, **week**, or **month** using query params o
 | `period` | Range |
 |----------|--------|
 | `day` | Start of selected day → end of selected day |
-| `week` | **Business week:** Monday **09:00** → Friday **23:59:59** (anchor rules below) |
+| `week` | **Business week:** Monday **09:00** → Saturday **23:59:59** (Sunday = completed week; Mon before 9 AM = previous week) |
 | `month` | Start of month containing `date` → end of that month |
 
 **Business week rules** (shop owner request, June 2026):

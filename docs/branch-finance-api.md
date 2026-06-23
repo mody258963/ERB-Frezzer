@@ -81,7 +81,7 @@ POST /api/v1/branch-finance/payments
 
 Applies FIFO to **open** charges between the same branch pair (oldest first).
 
----
+Also updates **per-branch realized cash** on the dashboard: `debtor_branch_id` (paying) → cash out; `creditor_branch_id` (receiving) → cash in. Org-wide total is unchanged. See [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md).
 
 ## Balance matrix
 

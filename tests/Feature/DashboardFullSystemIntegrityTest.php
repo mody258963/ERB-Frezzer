@@ -322,7 +322,9 @@ class DashboardFullSystemIntegrityTest extends TestCase
             $this->assertEquals($cashBeforeBranchFinance, (float) $this->dashboardSummary()['cash_on_hand_realized']);
             $this->assertEquals(400.0, $this->branchBalanceOwed());
 
-            // 9) Branch payment (money) — dashboard cash unchanged
+            // 9) Branch payment (money) — per-branch cash moves; org total unchanged
+            $creditorCashBefore = (float) $this->dashboardSummaryForBranch($this->branch->id)['cash_on_hand_realized'];
+            $debtorCashBefore = (float) $this->dashboardSummaryForBranch($this->branchB->id)['cash_on_hand_realized'];
             $this->runStep(
                 'دفع مالي بين الفروع',
                 ['cash_on_hand_realized'],
@@ -336,6 +338,8 @@ class DashboardFullSystemIntegrityTest extends TestCase
             );
             $this->assertEquals(250.0, $this->branchBalanceOwed());
             $this->assertEquals($cashBeforeBranchFinance, (float) $this->dashboardSummary()['cash_on_hand_realized']);
+            $this->assertEqualsWithDelta($creditorCashBefore + 150, (float) $this->dashboardSummaryForBranch($this->branch->id)['cash_on_hand_realized'], 0.01);
+            $this->assertEqualsWithDelta($debtorCashBefore - 150, (float) $this->dashboardSummaryForBranch($this->branchB->id)['cash_on_hand_realized'], 0.01);
 
             // 10) Edit pending transfer + complete
             $editableTransferId = null;
@@ -517,6 +521,17 @@ class DashboardFullSystemIntegrityTest extends TestCase
     {
         return $this->withToken($this->token)
             ->getJson('/api/v1/dashboard/summary')
+            ->assertOk()
+            ->json();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function dashboardSummaryForBranch(string $branchId): array
+    {
+        return $this->withToken($this->token)
+            ->getJson('/api/v1/dashboard/summary?branch_id='.$branchId)
             ->assertOk()
             ->json();
     }

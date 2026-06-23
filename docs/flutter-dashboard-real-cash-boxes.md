@@ -92,6 +92,7 @@ period_cash_out_realized =
     supplier_payments_in_period
   + customer_refund_cash_outs_in_period
   + owner_cash_outs_in_period
+  + inter_branch_payments_sent_in_period
 ```
 
 ```
@@ -134,6 +135,22 @@ Sum of `owner_cash_outs.amount` where `created_at` is in the period.
 
 **API:** `POST /api/v1/settings/capital/cash-out`
 
+### Component 4 — Inter-branch payments sent (مدفوعات بين الفروع — صادر)
+
+Sum of settled `branch_financial_entries.amount` where:
+
+| Rule | Value |
+|------|--------|
+| `entry_type` | `payment` |
+| `status` | `settled` |
+| `voided_at` | `null` |
+| Branch scope | `debtor_branch_id` = selected branch (paying branch) |
+| Date | `settled_at` in period (fallback: `created_at`) |
+
+**API:** `POST /api/v1/branch-finance/payments` (`debtor_branch_id` = branch that pays cash)
+
+Org-wide dashboard (no `branch_id`) includes both sent and received — they net to zero on total `cash_on_hand_realized`.
+
 ---
 
 ## النقد الداخل — how `period_cash_in_realized` is calculated
@@ -145,6 +162,7 @@ period_cash_in_realized =
     cash_invoice_totals_in_period
   + customer_payments_in_period
   + saturday_settlements_in_period
+  + inter_branch_payments_received_in_period
 ```
 
 | Source | Date column | Excluded |
@@ -154,6 +172,8 @@ period_cash_in_realized =
 | Saturday settlement | `saturday_settlements.created_at` | `offset` |
 
 **APIs:** `POST /invoices` (cash), `POST /customers/{id}/payments`, `POST /settlements`
+
+**Inter-branch payments received** (`creditor_branch_id` = receiving branch): settled non-void `branch_financial_entries` with `entry_type = payment`, dated by `settled_at`. **API:** `POST /branch-finance/payments`.
 
 After any collection at POS, refresh `GET /dashboard/cash?period=day` so the drawer card updates.
 

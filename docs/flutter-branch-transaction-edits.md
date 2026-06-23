@@ -11,10 +11,10 @@
 | الإجراء | من يستطيع | متى | تأثير لوحة التحكم الرئيسية |
 |---------|-----------|-----|---------------------------|
 | **عكس تحويل بضائع** (`PATCH /transfers/{id}/reverse`) | admin فقط | بعد `completed` فقط | يعيد المخزون؛ **لا يغيّر** النقد المحقق |
-| **تعديل قيد مالي بين الفروع** | admin | شحنة `open` أو دفعة | **لا يغيّر** صناديق النقد على `/dashboard/summary` |
-| **إلغاء (void) قيد مالي** | admin | أي قيد غير مرتبط بتحويل | يحدّث `/branch-finance/balances` فقط |
+| **تعديل قيد مالي بين الفروع** | admin | شحنة `open` أو دفعة | دفعة → يحدّث صناديق النقد للفرعين؛ شحنة → لا |
+| **إلغاء (void) قيد مالي** | admin | أي قيد غير مرتبط بتحويل | دفعة → يعكس حركة النقد؛ شحنة → أرصدة الفروع فقط |
 
-> **مهم:** مدفوعات الفروع (`/branch-finance/payments`) تسجّل ديناً بين الفروع ولا تُحسب ضمن `cash_on_hand_realized` أو `must_collect_customers` / `must_pay_suppliers`.
+> **مهم:** مدفوعات الفروع (`/branch-finance/payments`) تسجّل ديناً بين الفروع **وتحرّك صندوق النقد** لكل فرع (خصم من الفرع الدافع `debtor_branch_id`، إضافة للفرع المستلم `creditor_branch_id`). لا تُحسب ضمن `must_collect_customers` / `must_pay_suppliers`. راجع [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md).
 
 ---
 
@@ -78,21 +78,22 @@
 |----------|------|
 | `GET /branch-finance/balances` | After edit/void/payment |
 | `GET /branch-finance/entries` | List/detail |
-| `GET /dashboard/summary` | **Not required** for branch finance-only actions |
+| `GET /dashboard/summary` or `GET /dashboard/cash` | After **payment** edit/void (per-branch cash boxes) |
 
 ---
 
-## What does NOT change main dashboard cash
+## What does NOT change org-wide dashboard cash
 
-These actions affect **inventory** and/or **branch-finance ledger** only:
+These actions do **not** change **org-wide** `cash_on_hand_realized` (no `branch_id`):
 
 - `PATCH /transfers/{id}/complete`
 - `PATCH /transfers/{id}/reverse`
 - `POST /branch-finance/charges`
-- `POST /branch-finance/payments`
-- `PATCH|DELETE /branch-finance/entries/{id}`
+- `PATCH|DELETE /branch-finance/entries/{id}` when entry is a **charge** (not a payment)
 
-Realized cash (`cash_on_hand_realized`, `period_*` cash fields) still comes from: cash sales, customer payments, supplier installment payments, refunds, owner cash-out.
+**Inter-branch payments** (`POST /branch-finance/payments`, payment edit/void) move cash **between branches** — org total unchanged, but **per-branch** `GET /dashboard/summary?branch_id=` and `GET /dashboard/cash?branch_id=` must refresh.
+
+Realized cash also includes: cash sales, customer payments, supplier installment payments, refunds, owner cash-out, and inter-branch payments (per branch).
 
 See also: [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md).
 

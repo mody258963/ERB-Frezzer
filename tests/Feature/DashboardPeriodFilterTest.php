@@ -178,7 +178,7 @@ class DashboardPeriodFilterTest extends TestCase
 
         $this->assertSame('week', $week['period']['key']);
         $this->assertStringContainsString('2026-06-15T09:00:00', $week['period']['from']);
-        $this->assertStringContainsString('2026-06-19T23:59:59', $week['period']['to']);
+        $this->assertStringContainsString('2026-06-20T23:59:59', $week['period']['to']);
         $this->assertEquals(200.0, $week['period_revenue']);
 
         Carbon::setTestNow();

@@ -18,6 +18,7 @@ class BranchFinanceService
     public function __construct(
         private BranchFinancialEntryRepositoryInterface $entries,
         private AuditLogService $audit,
+        private DashboardCacheService $dashboardCache,
     ) {}
 
     public function createChargeFromTransfer(User $user, StockTransfer $transfer, string $valuation = 'cost'): BranchFinancialEntry
@@ -171,6 +172,10 @@ class BranchFinanceService
 
         $this->audit->record($user, 'branch_finance.void', 'branch_financial_entry', $entry->id, $before, $entry->fresh()?->toArray());
 
+        if ($entry->entry_type === BranchFinancialEntryType::Payment) {
+            $this->dashboardCache->forgetAllSummaries();
+        }
+
         return $entry->fresh(['creditorBranch', 'debtorBranch', 'creator', 'voider']);
     }
 
@@ -230,6 +235,7 @@ class BranchFinanceService
         $this->applyPaymentToOpenCharges($entry);
 
         $this->audit->record($user, 'branch_finance.payment', 'branch_financial_entry', $entry->id, null, $entry->toArray());
+        $this->dashboardCache->forgetAllSummaries();
 
         return $entry->load(['creditorBranch', 'debtorBranch']);
     }
@@ -347,6 +353,7 @@ class BranchFinanceService
         });
 
         $this->audit->record($user, 'branch_finance.update', 'branch_financial_entry', $entry->id, $before, $entry->fresh()?->toArray());
+        $this->dashboardCache->forgetAllSummaries();
 
         return $entry->fresh(['creditorBranch', 'debtorBranch', 'creator']);
     }

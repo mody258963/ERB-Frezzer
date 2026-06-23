@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\BranchFinancialEntryStatus;
+use App\Enums\BranchFinancialEntryType;
 use App\Enums\CapitalAdjustmentType;
 use App\Enums\SettlementPaymentMethod;
 use App\Models\Branch;
+use App\Models\BranchFinancialEntry;
 use App\Models\CapitalAdjustment;
 use App\Models\CompanySetting;
 use App\Models\Customer;
@@ -328,14 +331,27 @@ class CapitalService
             ->where('created_at', '<=', $to)
             ->sum('amount');
 
+        $interBranchCashInTotal = $this->sumInterBranchPaymentsReceived($branchId);
+        $interBranchCashInWeekly = $this->sumInterBranchPaymentsReceived($branchId, $from, $to);
+        $interBranchCashOutTotal = $this->sumInterBranchPaymentsSent($branchId);
+        $interBranchCashOutWeekly = $this->sumInterBranchPaymentsSent($branchId, $from, $to);
+
         $cashInLifetime = (float) bcadd(
-            bcadd((string) $cashSalesTotal, (string) $customerPaymentsTotal, 2),
-            (string) $settlementInTotal,
+            bcadd(
+                bcadd((string) $cashSalesTotal, (string) $customerPaymentsTotal, 2),
+                (string) $settlementInTotal,
+                2
+            ),
+            (string) $interBranchCashInTotal,
             2
         );
         $cashOutLifetime = (float) bcadd(
-            bcadd((string) $supplierPaymentsTotal, (string) $customerRefundsCashOutTotal, 2),
-            (string) $ownerCashOutTotal,
+            bcadd(
+                bcadd((string) $supplierPaymentsTotal, (string) $customerRefundsCashOutTotal, 2),
+                (string) $ownerCashOutTotal,
+                2
+            ),
+            (string) $interBranchCashOutTotal,
             2
         );
         $cashOnHand = (float) bcsub(
@@ -345,13 +361,21 @@ class CapitalService
         );
 
         $cashInWeekly = (float) bcadd(
-            bcadd((string) $cashSalesWeekly, (string) $customerPaymentsWeekly, 2),
-            (string) $settlementInWeekly,
+            bcadd(
+                bcadd((string) $cashSalesWeekly, (string) $customerPaymentsWeekly, 2),
+                (string) $settlementInWeekly,
+                2
+            ),
+            (string) $interBranchCashInWeekly,
             2
         );
         $cashOutWeekly = (float) bcadd(
-            bcadd((string) $supplierPaymentsWeekly, (string) $customerRefundsCashOutWeekly, 2),
-            (string) $ownerCashOutWeekly,
+            bcadd(
+                bcadd((string) $supplierPaymentsWeekly, (string) $customerRefundsCashOutWeekly, 2),
+                (string) $ownerCashOutWeekly,
+                2
+            ),
+            (string) $interBranchCashOutWeekly,
             2
         );
 
@@ -417,6 +441,68 @@ class CapitalService
             'estimated_available' => $legacyEstimatedAvailable,
             'legacy_estimated_available' => $legacyEstimatedAvailable,
         ];
+    }
+
+    private function sumInterBranchPaymentsReceived(
+        ?string $branchId,
+        ?CarbonInterface $from = null,
+        ?CarbonInterface $to = null,
+    ): float {
+        $query = BranchFinancialEntry::query()
+            ->where('entry_type', BranchFinancialEntryType::Payment)
+            ->where('status', BranchFinancialEntryStatus::Settled)
+            ->whereNull('voided_at');
+
+        if ($branchId !== null) {
+            $query->where('creditor_branch_id', $branchId);
+        }
+
+        if ($from !== null && $to !== null) {
+            $query->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereNotNull('settled_at')
+                        ->where('settled_at', '>=', $from)
+                        ->where('settled_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->whereNull('settled_at')
+                        ->where('created_at', '>=', $from)
+                        ->where('created_at', '<=', $to);
+                });
+            });
+        }
+
+        return (float) $query->sum('amount');
+    }
+
+    private function sumInterBranchPaymentsSent(
+        ?string $branchId,
+        ?CarbonInterface $from = null,
+        ?CarbonInterface $to = null,
+    ): float {
+        $query = BranchFinancialEntry::query()
+            ->where('entry_type', BranchFinancialEntryType::Payment)
+            ->where('status', BranchFinancialEntryStatus::Settled)
+            ->whereNull('voided_at');
+
+        if ($branchId !== null) {
+            $query->where('debtor_branch_id', $branchId);
+        }
+
+        if ($from !== null && $to !== null) {
+            $query->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereNotNull('settled_at')
+                        ->where('settled_at', '>=', $from)
+                        ->where('settled_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->whereNull('settled_at')
+                        ->where('created_at', '>=', $from)
+                        ->where('created_at', '<=', $to);
+                });
+            });
+        }
+
+        return (float) $query->sum('amount');
     }
 
     private function requireBranchIdForUpdate(?string $branchId): string

@@ -141,21 +141,22 @@ See also [flutter-supplier-installment-partial-pay.md](./flutter-supplier-instal
 
 ---
 
-## 2. Business week — Monday 9 AM to Friday night
+## 2. Business week — Monday 9 AM to Saturday midnight
 
 ### Client quote
 
-> بدايه الاسبوع الاتنين من الساعه 9 ونهايته السبت بعد الساعه 12 بليل — عشان هو الاسبوع انتهي يوم الجمعه
+> الاسبوع بدايه يوم الاثنين من الساعه 9 الصبح ليوم السبت الساعه 12 بليل او 1 مش هتفرق
 
-**Translation:** Week starts **Monday 09:00** and ends **Friday 23:59:59** (Saturday midnight = end of Friday). The shop week ends on Friday.
+**Translation:** Week starts **Monday 09:00** and runs through **Saturday 23:59:59** (client says midnight Saturday / 1 AM — backend uses end of Saturday).
 
 ### Backend behavior (`period=week`)
 
 | Rule | Behavior |
 |------|----------|
 | Start | Monday **09:00** (app timezone) |
-| End | Friday **23:59:59** |
-| Saturday / Sunday | Show the **completed** week that ended last Friday |
+| End | Saturday **23:59:59** |
+| Saturday (during the day) | Still **inside** the current business week |
+| Sunday | Show the **completed** week that ended last Saturday night |
 | Monday before 09:00 | Still in **previous** business week |
 
 Example response:
@@ -165,7 +166,7 @@ Example response:
   "period": {
     "key": "week",
     "from": "2026-06-15T09:00:00+00:00",
-    "to": "2026-06-19T23:59:59+00:00",
+    "to": "2026-06-20T23:59:59+00:00",
     "anchor_date": "2026-06-18"
   }
 }
@@ -174,12 +175,42 @@ Example response:
 ### Flutter rules
 
 1. **Do not** compute week boundaries in Dart — always use `period.from` / `period.to` from the API.
-2. Label: **هذا الأسبوع (الإثنين 9 ص – الجمعة)** / “This week (Mon 9 AM – Fri)”.
+2. Label: **هذا الأسبوع (الإثنين 9 ص – السبت)** / “This week (Mon 9 AM – Sat)”.
 3. Pass `period=week` on summary, sales, and cash when the week tab is selected.
 
 Config on server: `config/business.php` → `week_start_hour` (default `9`).
 
 **Note:** Customer Saturday settlement reminders use a **different** week rule — see [flutter-customer-settlement-cycle.md](./flutter-customer-settlement-cycle.md).
+
+---
+
+## 4. Inter-branch payment — cash box
+
+### Client quote
+
+> لما ادفع دفعه من حساب فرع لفرع تاني تتخصم من صندوق النقديه ويزيد فلفرع الثاني
+
+**Translation:** When recording a payment from branch A to branch B, **deduct cash from branch A’s drawer** and **add cash to branch B’s drawer**.
+
+### Backend behavior
+
+`POST /api/v1/branch-finance/payments` updates the **inter-branch ledger** and the **realized cash snapshot** per branch:
+
+| Branch | Cash effect |
+|--------|-------------|
+| **Debtor** (paying branch — `debtor_branch_id`) | `period_cash_out_realized` **+amount**, `cash_on_hand_realized` **−amount** |
+| **Creditor** (receiving branch — `creditor_branch_id`) | `period_cash_in_realized` **+amount**, `cash_on_hand_realized` **+amount** |
+
+Org-wide dashboard (no `branch_id`) nets inter-branch payments to **zero** — cash moves between branches, total unchanged.
+
+Voiding or editing a payment reverses or adjusts the cash effect. See [flutter-dashboard-real-cash-boxes.md](./flutter-dashboard-real-cash-boxes.md).
+
+### Flutter
+
+After `POST /branch-finance/payments`, refresh:
+
+- `GET /branch-finance/balances` (ledger)
+- `GET /dashboard/summary?branch_id=` or `GET /dashboard/cash?branch_id=` for the paying/receiving branch drawer
 
 ---
 
