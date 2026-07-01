@@ -20,6 +20,7 @@ Read this page first, then open the detailed doc for each topic.
 | Dashboard period filter (`day` / `week` / `month`) | [flutter-dashboard-period-filter.md](./flutter-dashboard-period-filter.md) | Segmented filter on summary, sales, cash |
 | **رأس المال** = مخزون + نقد (computed) | [flutter-business-capital-definition.md](./flutter-business-capital-definition.md) | Update capital card; admin sets opening cash only |
 | **Reverse transfer** + branch finance edit/void | [flutter-branch-transaction-edits.md](./flutter-branch-transaction-edits.md) | Admin reverse completed transfer; edit/void branch ledger |
+| **Shop owner requests** (supplier pay, week, drawer, inter-branch cash) | [flutter-dev-handoff-june-2026.md](./flutter-dev-handoff-june-2026.md) | **Start here** for latest client-driven work |
 
 ---
 
@@ -44,6 +45,9 @@ Read this page first, then open the detailed doc for each topic.
 | `PATCH` | `/transfers/{id}/complete` | admin/manager/warehouse | Move stock; `valuation: cost\|sell` |
 | `PATCH` | `/transfers/{id}/reverse` | **admin** | Undo completed transfer + void branch charge |
 | `PATCH` | `/customers/{id}/payments/{paymentId}` | **admin** | Fix latest payment amount |
+| `POST` | `/suppliers/{id}/payments` | admin/manager | Lump-sum supplier pay (FIFO allocation) |
+| `GET` | `/dashboard/payables/by-supplier` | any | Grouped supplier debt |
+| `POST` | `/branch-finance/payments` | admin/manager | Inter-branch payment (**updates per-branch cash**) |
 | `PATCH` / `DELETE` | `/branch-finance/entries/{id}` | **admin** | Edit or void inter-branch ledger entry |
 
 ---

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Supplier\CollectSupplierPaymentRequest;
 use App\Http\Requests\Api\V1\Supplier\StoreSupplierRequest;
 use App\Http\Requests\Api\V1\Supplier\UpdateSupplierRequest;
+use App\Http\Resources\DashboardPayablesBySupplierResource;
 use App\Http\Resources\LinkedPartyBalanceResource;
 use App\Http\Resources\SupplierDebtResource;
 use App\Http\Resources\SupplierInstallmentPaymentResource;
@@ -14,7 +15,9 @@ use App\Http\Resources\SupplierPaymentResource;
 use App\Http\Resources\SupplierResource;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use App\Services\ContraSettlementService;
+use App\Services\DashboardQueryService;
 use App\Services\SupplierPaymentService;
+use App\Support\BranchVisibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -27,6 +30,7 @@ class SupplierController extends Controller
         private SupplierRepositoryInterface $suppliers,
         private ContraSettlementService $contraSettlements,
         private SupplierPaymentService $supplierPayments,
+        private DashboardQueryService $dashboard,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -34,6 +38,13 @@ class SupplierController extends Controller
         return SupplierResource::collection(
             $this->suppliers->paginate($request->user(), (int) $request->query('per_page', 25))
         );
+    }
+
+    public function payablesBySupplier(Request $request): DashboardPayablesBySupplierResource
+    {
+        $branchId = BranchVisibility::activeBranchId($request->user());
+
+        return new DashboardPayablesBySupplierResource($this->dashboard->payablesBySupplier($branchId));
     }
 
     public function store(StoreSupplierRequest $request): JsonResponse

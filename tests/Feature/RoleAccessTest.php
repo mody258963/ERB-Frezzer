@@ -1,0 +1,249 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\UserRole;
+use App\Models\Branch;
+use App\Models\Part;
+use App\Models\PartCategory;
+use App\Models\Stock;
+use App\Models\Supplier;
+use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\PartCategorySeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Passport\Passport;
+use Tests\TestCase;
+
+class RoleAccessTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Branch $branch;
+
+    private User $warehouseUser;
+
+    private User $salespersonUser;
+
+    private User $adminUser;
+
+    private string $warehouseToken;
+
+    private string $salespersonToken;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(PartCategorySeeder::class);
+
+        $this->branch = Branch::query()->firstOrFail();
+
+        $this->warehouseUser = User::factory()->create([
+            'email' => 'warehouse@example.com',
+            'role' => UserRole::Warehouse,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        $this->salespersonUser = User::factory()->create([
+            'email' => 'sales@example.com',
+            'role' => UserRole::Salesperson,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        $this->adminUser = User::query()->where('email', 'admin@example.com')->firstOrFail();
+
+        $warehouseLogin = $this->postJson('/api/v1/auth/login', [
+            'email' => 'warehouse@example.com',
+            'password' => 'password',
+        ])->assertOk();
+        $warehouseLogin->assertJsonPath('user.role', 'warehouse');
+        $this->warehouseToken = (string) $warehouseLogin->json('token');
+
+        $salesLogin = $this->postJson('/api/v1/auth/login', [
+            'email' => 'sales@example.com',
+            'password' => 'password',
+        ])->assertOk();
+        $salesLogin->assertJsonPath('user.role', 'salesperson');
+        $this->salespersonToken = (string) $salesLogin->json('token');
+
+        $this->assertNotSame($this->warehouseToken, $this->salespersonToken);
+    }
+
+    public function test_auth_me_exposes_permission_flags_for_operational_roles(): void
+    {
+        Passport::actingAs($this->warehouseUser, [], 'api');
+        $warehouse = $this->getJson('/api/v1/auth/me')->assertOk()->json();
+
+        Passport::actingAs($this->salespersonUser, [], 'api');
+        $sales = $this->getJson('/api/v1/auth/me')->assertOk()->json();
+
+        $this->assertFalse($warehouse['can_view_dashboard']);
+        $this->assertFalse($warehouse['can_view_capital']);
+        $this->assertFalse($warehouse['can_view_reports']);
+        $this->assertFalse($warehouse['can_cash_out_profit']);
+        $this->assertTrue($warehouse['can_pay_suppliers']);
+
+        $this->assertFalse($sales['can_view_dashboard']);
+        $this->assertFalse($sales['can_view_capital']);
+        $this->assertFalse($sales['can_view_reports']);
+        $this->assertFalse($sales['can_cash_out_profit']);
+        $this->assertEquals('salesperson', $sales['role']);
+        $this->assertTrue($sales['can_pay_suppliers']);
+        $this->assertTrue($sales['can_collect_customer_payments']);
+    }
+
+    public function test_warehouse_and_salesperson_cannot_access_dashboard_or_capital(): void
+    {
+        foreach ([$this->warehouseUser, $this->salespersonUser] as $user) {
+            Passport::actingAs($user, [], 'api');
+            $this->getJson('/api/v1/dashboard/summary')->assertForbidden();
+            $this->getJson('/api/v1/dashboard/cash')->assertForbidden();
+            $this->getJson('/api/v1/settings/capital')->assertForbidden();
+            $this->postJson('/api/v1/settings/capital/cash-out', [
+                'amount' => 100,
+                'reason' => 'test',
+            ])->assertForbidden();
+        }
+    }
+
+    public function test_warehouse_and_salesperson_cannot_access_reports(): void
+    {
+        $reportPaths = [
+            '/api/v1/reports/financial',
+            '/api/v1/reports/sales',
+            '/api/v1/reports/inventory',
+            '/api/v1/reports/customers',
+            '/api/v1/reports/suppliers',
+            '/api/v1/reports/returns',
+            '/api/v1/reports/parts-sales-chart',
+        ];
+
+        foreach ([$this->warehouseToken, $this->salespersonToken] as $token) {
+            foreach ($reportPaths as $path) {
+                $this->withToken($token)->getJson($path)->assertForbidden();
+            }
+        }
+    }
+
+    public function test_warehouse_and_salesperson_can_pay_supplier(): void
+    {
+        $supplier = $this->createSupplierWithDebt(1000.0);
+
+        $this->withToken($this->warehouseToken)->postJson("/api/v1/suppliers/{$supplier->id}/payments", [
+            'payment_method' => 'cash',
+            'amount' => 200,
+        ])->assertCreated();
+
+        $this->withToken($this->salespersonToken)->postJson("/api/v1/suppliers/{$supplier->id}/payments", [
+            'payment_method' => 'cash',
+            'amount' => 150,
+        ])->assertCreated();
+    }
+
+    public function test_warehouse_and_salesperson_can_list_grouped_supplier_payables(): void
+    {
+        Supplier::query()->create([
+            'name' => 'Grouped Supplier',
+            'phone' => null,
+            'address' => null,
+            'total_debt' => 250,
+            'is_active' => true,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        foreach ([$this->warehouseUser, $this->salespersonUser] as $user) {
+            Passport::actingAs($user, [], 'api');
+            $this->getJson('/api/v1/suppliers/payables/by-supplier')
+                ->assertOk()
+                ->assertJsonStructure(['suppliers']);
+        }
+    }
+
+    public function test_salesperson_can_collect_customer_payment(): void
+    {
+        $adminToken = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->assertOk()->json('token');
+
+        $customerId = (string) $this->withToken($adminToken)->postJson('/api/v1/customers', [
+            'name' => 'Credit Customer',
+            'type' => 'credit',
+            'credit_limit' => 10000,
+            'branch_id' => $this->branch->id,
+        ])->assertCreated()->json('id');
+
+        $part = Part::query()->create([
+            'code' => 'CUST-'.uniqid(),
+            'name' => 'Customer Part',
+            'category_id' => PartCategory::query()->where('key', 'compressor')->value('id'),
+            'unit' => 'pc',
+            'sell_price' => 100,
+            'cost_price' => 50,
+            'min_stock' => 0,
+            'is_active' => true,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        Stock::query()->create([
+            'part_id' => $part->id,
+            'branch_id' => $this->branch->id,
+            'quantity' => 10,
+            'average_cost' => 50,
+        ]);
+
+        $this->withToken($adminToken)->postJson('/api/v1/invoices', [
+            'customer_id' => $customerId,
+            'branch_id' => $this->branch->id,
+            'payment_type' => 'credit',
+            'items' => [['part_id' => $part->id, 'quantity' => 1]],
+        ])->assertCreated();
+
+        $this->withToken($this->salespersonToken)->postJson("/api/v1/customers/{$customerId}/payments", [
+            'amount' => 50,
+            'payment_method' => 'cash',
+        ])->assertCreated();
+    }
+
+    private function createSupplierWithDebt(float $amount): Supplier
+    {
+        $supplier = Supplier::query()->create([
+            'name' => 'Role Access Supplier',
+            'phone' => null,
+            'address' => null,
+            'total_debt' => 0,
+            'is_active' => true,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        $part = Part::query()->create([
+            'code' => 'ROLE-'.uniqid(),
+            'name' => 'Role Part',
+            'category_id' => PartCategory::query()->where('key', 'compressor')->value('id'),
+            'unit' => 'pc',
+            'sell_price' => 50,
+            'cost_price' => 30,
+            'min_stock' => 0,
+            'is_active' => true,
+        ]);
+
+        $adminToken = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->assertOk()->json('token');
+
+        $this->withToken($adminToken)->postJson('/api/v1/purchases', [
+            'supplier_id' => $supplier->id,
+            'branch_id' => $this->branch->id,
+            'payment_type' => 'installments',
+            'installment_count' => 1,
+            'installment_start_date' => now()->toDateString(),
+            'items' => [
+                ['part_id' => $part->id, 'quantity' => 1, 'unit_cost' => $amount],
+            ],
+        ])->assertCreated();
+
+        return $supplier->fresh();
+    }
+}

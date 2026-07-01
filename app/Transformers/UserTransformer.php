@@ -3,6 +3,7 @@
 namespace App\Transformers;
 
 use App\Enums\UserRole;
+use App\Support\RolePermissions;
 use App\Models\User;
 
 final class UserTransformer
@@ -25,6 +26,12 @@ final class UserTransformer
             'accessible_branch_ids' => $isAdmin || $user->branch_id === null
                 ? null
                 : [$user->branch_id],
+            'can_view_dashboard' => RolePermissions::canViewDashboard($user->role),
+            'can_view_capital' => RolePermissions::canViewCapital($user->role),
+            'can_view_reports' => RolePermissions::canViewReports($user->role),
+            'can_cash_out_profit' => RolePermissions::canCashOutProfit($user->role),
+            'can_pay_suppliers' => RolePermissions::canPaySuppliers($user->role),
+            'can_collect_customer_payments' => RolePermissions::canCollectCustomerPayments($user->role),
         ];
 
         if ($user->relationLoaded('branch') && $user->branch) {
