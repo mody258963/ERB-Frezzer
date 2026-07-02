@@ -75,19 +75,17 @@ class AdminBranchFilterTest extends TestCase
             'is_active' => true,
         ]);
 
-        User::query()->create([
-            'name' => 'Sales',
-            'email' => 'sales-branch@example.com',
-            'password' => 'password123',
-            'role' => UserRole::Salesperson,
+        User::factory()->create([
+            'name' => 'Branch Manager',
+            'email' => 'manager-branch@example.com',
+            'role' => UserRole::Manager,
             'branch_id' => $assigned->id,
-            'is_active' => true,
         ]);
 
         $token = (string) $this->postJson('/api/v1/auth/login', [
-            'email' => 'sales-branch@example.com',
-            'password' => 'password123',
-        ])->json('token');
+            'email' => 'manager-branch@example.com',
+            'password' => 'password',
+        ])->assertOk()->json('token');
 
         $summary = $this->withToken($token)
             ->getJson('/api/v1/dashboard/summary?branch_id='.$other->id)

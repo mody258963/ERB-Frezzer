@@ -38,9 +38,12 @@ After login, read **`GET /api/v1/auth/me`** — new boolean flags:
 
 | Field | `admin` | `manager` | `salesperson` | `warehouse` |
 |-------|---------|-----------|---------------|-------------|
+| `can_access_all_branches` | ✓ | ✗ | ✗ | ✗ |
+| `can_select_branch` | ✓ | ✗ | ✗ | ✗ |
 | `can_view_dashboard` | ✓ | ✓ | ✗ | ✗ |
 | `can_view_capital` | ✓ | ✓ | ✗ | ✗ |
 | `can_view_reports` | ✓ | ✓ | ✗ | ✗ |
+| `accessible_branch_ids` | all active branches | `[branch_id]` | `[branch_id]` | `[branch_id]` |
 | `can_cash_out_profit` | ✓ | ✗ | ✗ | ✗ |
 | `can_pay_suppliers` | ✓ | ✓ | ✓ | ✓ |
 | `can_collect_customer_payments` | ✓ | ✓ | ✓ | ✗ |
@@ -75,6 +78,24 @@ GET /api/v1/dashboard/payables/by-supplier
 - `GET /api/v1/reports/*` (all report endpoints)
 - `GET /api/v1/settings/capital`
 - `POST /api/v1/settings/capital/cash-out` (admin only)
+
+### Admin — all branches
+
+| Field | Value |
+|-------|--------|
+| `can_access_all_branches` | `true` |
+| `can_select_branch` | `true` |
+| `accessible_branch_ids` | UUIDs of all **active** branches |
+
+**API usage:**
+
+- No `branch_id` → aggregated data across all branches (dashboard, lists).
+- `?branch_id={uuid}` or header `X-Branch-Id: {uuid}` → filter to one branch.
+- `branch_id` in POST body for invoices, purchases, parts, etc. — admin may use **any** active branch.
+
+Non-admin roles (`manager`, `salesperson`, `warehouse`) are **locked** to `user.branch_id`; the server ignores a different `branch_id`.
+
+See [flutter-per-branch-isolation.md](./flutter-per-branch-isolation.md).
 
 ---
 

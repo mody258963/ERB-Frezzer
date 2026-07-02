@@ -59,6 +59,7 @@ After `POST /auth/login` or `GET /auth/me`:
   "name": "Ahmed",
   "role": "manager",
   "branch_id": "019ebecf-cc58-71e9-a7ff-f262147240b6",
+  "can_access_all_branches": false,
   "can_select_branch": false,
   "accessible_branch_ids": ["019ebecf-cc58-71e9-a7ff-f262147240b6"],
   "branch": {
@@ -68,11 +69,24 @@ After `POST /auth/login` or `GET /auth/me`:
 }
 ```
 
+**Admin** example:
+
+```json
+{
+  "role": "admin",
+  "branch_id": null,
+  "can_access_all_branches": true,
+  "can_select_branch": true,
+  "accessible_branch_ids": ["uuid-a", "uuid-b", "uuid-c"]
+}
+```
+
 | Field | Flutter usage |
 |-------|-----------------|
 | `branch_id` | Default branch context for all API calls (non-admin) |
+| `can_access_all_branches` | `true` only for admin |
 | `can_select_branch` | `true` only for admin → show branch dropdown |
-| `accessible_branch_ids` | `null` = admin (all branches); else single UUID list |
+| `accessible_branch_ids` | All active branch UUIDs (admin); else `[branch_id]` |
 | `branch.name` | Show in app bar: `Branch: التاني` |
 
 ```dart

@@ -131,5 +131,7 @@ class UserManagementTest extends TestCase
         $admin = User::query()->where('email', 'admin@example.com')->firstOrFail();
         $me = $this->actingAs($admin, 'api')->getJson('/api/v1/auth/me')->assertOk()->json();
         $this->assertTrue($me['can_select_branch']);
+        $this->assertTrue($me['can_access_all_branches']);
+        $this->assertCount(2, $me['accessible_branch_ids']);
     }
 }

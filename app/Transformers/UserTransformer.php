@@ -3,6 +3,7 @@
 namespace App\Transformers;
 
 use App\Enums\UserRole;
+use App\Models\Branch;
 use App\Support\RolePermissions;
 use App\Models\User;
 
@@ -15,6 +16,8 @@ final class UserTransformer
     {
         $isAdmin = $user->role === UserRole::Admin;
 
+        $canAccessAllBranches = $isAdmin;
+
         $data = [
             'id' => $user->id,
             'name' => $user->name,
@@ -22,10 +25,11 @@ final class UserTransformer
             'role' => $user->role->value,
             'branch_id' => $user->branch_id,
             'is_active' => $user->is_active,
-            'can_select_branch' => $isAdmin || $user->branch_id === null,
-            'accessible_branch_ids' => $isAdmin || $user->branch_id === null
-                ? null
-                : [$user->branch_id],
+            'can_access_all_branches' => $canAccessAllBranches,
+            'can_select_branch' => $canAccessAllBranches || $user->branch_id === null,
+            'accessible_branch_ids' => $canAccessAllBranches
+                ? Branch::query()->where('is_active', true)->orderBy('name')->pluck('id')->all()
+                : ($user->branch_id ? [$user->branch_id] : null),
             'can_view_dashboard' => RolePermissions::canViewDashboard($user->role),
             'can_view_capital' => RolePermissions::canViewCapital($user->role),
             'can_view_reports' => RolePermissions::canViewReports($user->role),

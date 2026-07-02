@@ -70,6 +70,36 @@ class RoleAccessTest extends TestCase
         $this->assertNotSame($this->warehouseToken, $this->salespersonToken);
     }
 
+    public function test_manager_can_access_dashboard_and_reports(): void
+    {
+        $manager = User::factory()->create([
+            'email' => 'manager-access@example.com',
+            'role' => UserRole::Manager,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        Passport::actingAs($manager, [], 'api');
+        $this->getJson('/api/v1/auth/me')->assertJsonPath('role', 'manager');
+        $this->getJson('/api/v1/dashboard/summary')->assertOk();
+        $this->getJson('/api/v1/reports/sales')->assertOk();
+    }
+
+    public function test_admin_can_access_all_branches_via_auth_me(): void
+    {
+        $branchB = Branch::query()->create([
+            'name' => 'Admin Access Branch B',
+            'is_active' => true,
+        ]);
+
+        Passport::actingAs($this->adminUser, [], 'api');
+        $me = $this->getJson('/api/v1/auth/me')->assertOk()->json();
+
+        $this->assertTrue($me['can_access_all_branches']);
+        $this->assertTrue($me['can_select_branch']);
+        $this->assertContains($this->branch->id, $me['accessible_branch_ids']);
+        $this->assertContains($branchB->id, $me['accessible_branch_ids']);
+    }
+
     public function test_auth_me_exposes_permission_flags_for_operational_roles(): void
     {
         Passport::actingAs($this->warehouseUser, [], 'api');

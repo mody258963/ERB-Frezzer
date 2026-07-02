@@ -9,9 +9,9 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureRole
 {
     /**
-     * Comma-separated roles, e.g. role:admin,manager
+     * @param  string  ...$roles  e.g. middleware('role:admin,manager')
      */
-    public function handle(Request $request, Closure $next, string $roles): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
 
@@ -19,10 +19,9 @@ class EnsureRole
             abort(Response::HTTP_UNAUTHORIZED, 'Unauthenticated.');
         }
 
-        $allowed = array_filter(array_map('trim', explode(',', $roles)));
-
-        foreach ($allowed as $role) {
-            if ($user->role->value === $role) {
+        foreach ($roles as $role) {
+            $role = trim($role);
+            if ($role !== '' && $user->role->value === $role) {
                 return $next($request);
             }
         }
