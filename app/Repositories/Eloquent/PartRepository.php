@@ -26,7 +26,15 @@ class PartRepository extends BaseRepository implements PartRepositoryInterface
 
         return $this->newQuery()
             ->with(['category'])
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($branchId, fn ($q) => $q->where(function ($inner) use ($branchId) {
+                $inner->where('branch_id', $branchId)
+                    ->orWhereNull('branch_id')
+                    ->orWhereIn('id', function ($sub) use ($branchId) {
+                        $sub->select('part_id')
+                            ->from('stock')
+                            ->where('branch_id', $branchId);
+                    });
+            }))
             ->when(empty($filters['include_inactive']), fn ($q) => $q->where('is_active', true))
             ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
             ->when($filters['category'] ?? null, fn ($q, $key) => $q->whereHas(

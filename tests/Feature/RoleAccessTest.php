@@ -113,6 +113,9 @@ class RoleAccessTest extends TestCase
         $this->assertFalse($warehouse['can_view_reports']);
         $this->assertFalse($warehouse['can_cash_out_profit']);
         $this->assertTrue($warehouse['can_pay_suppliers']);
+        $this->assertTrue($warehouse['can_collect_customer_payments']);
+        $this->assertTrue($warehouse['can_approve_returns']);
+        $this->assertTrue($warehouse['can_create_purchases']);
 
         $this->assertFalse($sales['can_view_dashboard']);
         $this->assertFalse($sales['can_view_capital']);
@@ -121,6 +124,8 @@ class RoleAccessTest extends TestCase
         $this->assertEquals('salesperson', $sales['role']);
         $this->assertTrue($sales['can_pay_suppliers']);
         $this->assertTrue($sales['can_collect_customer_payments']);
+        $this->assertTrue($sales['can_approve_returns']);
+        $this->assertFalse($sales['can_create_purchases']);
     }
 
     public function test_warehouse_and_salesperson_cannot_access_dashboard_or_capital(): void
@@ -190,7 +195,7 @@ class RoleAccessTest extends TestCase
         }
     }
 
-    public function test_salesperson_can_collect_customer_payment(): void
+    public function test_salesperson_and_warehouse_can_collect_customer_payment(): void
     {
         $adminToken = (string) $this->postJson('/api/v1/auth/login', [
             'email' => 'admin@example.com',
@@ -231,9 +236,80 @@ class RoleAccessTest extends TestCase
         ])->assertCreated();
 
         $this->withToken($this->salespersonToken)->postJson("/api/v1/customers/{$customerId}/payments", [
-            'amount' => 50,
+            'amount' => 30,
             'payment_method' => 'cash',
         ])->assertCreated();
+
+        $this->withToken($this->warehouseToken)->postJson("/api/v1/customers/{$customerId}/payments", [
+            'amount' => 20,
+            'payment_method' => 'cash',
+        ])->assertCreated();
+    }
+
+    public function test_warehouse_can_create_purchase_order(): void
+    {
+        $adminToken = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->assertOk()->json('token');
+
+        $supplier = Supplier::query()->create([
+            'name' => 'PO Supplier',
+            'phone' => null,
+            'address' => null,
+            'total_debt' => 0,
+            'is_active' => true,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        $part = Part::query()->create([
+            'code' => 'PO-'.uniqid(),
+            'name' => 'PO Part',
+            'category_id' => PartCategory::query()->where('key', 'compressor')->value('id'),
+            'unit' => 'pc',
+            'sell_price' => 80,
+            'cost_price' => 40,
+            'min_stock' => 0,
+            'is_active' => true,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        $this->withToken($this->warehouseToken)->postJson('/api/v1/purchases', [
+            'supplier_id' => $supplier->id,
+            'branch_id' => $this->branch->id,
+            'payment_type' => 'installments',
+            'installment_count' => 1,
+            'installment_start_date' => now()->toDateString(),
+            'items' => [['part_id' => $part->id, 'quantity' => 5, 'unit_cost' => 40]],
+        ])->assertCreated();
+    }
+
+    public function test_branch_user_sees_part_with_stock_even_when_branch_id_null(): void
+    {
+        $part = Part::query()->create([
+            'code' => 'LEGACY-'.uniqid(),
+            'name' => 'Legacy Part',
+            'category_id' => PartCategory::query()->where('key', 'compressor')->value('id'),
+            'unit' => 'pc',
+            'sell_price' => 100,
+            'cost_price' => 50,
+            'min_stock' => 0,
+            'is_active' => true,
+            'branch_id' => null,
+        ]);
+
+        Stock::query()->create([
+            'part_id' => $part->id,
+            'branch_id' => $this->branch->id,
+            'quantity' => 3,
+            'average_cost' => 50,
+        ]);
+
+        $ids = collect($this->withToken($this->warehouseToken)->getJson('/api/v1/parts')->assertOk()->json('data'))
+            ->pluck('id')
+            ->all();
+
+        $this->assertContains($part->id, $ids);
     }
 
     private function createSupplierWithDebt(float $amount): Supplier

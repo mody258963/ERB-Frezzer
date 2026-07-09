@@ -42,6 +42,26 @@ final class RolePermissions
             UserRole::Admin,
             UserRole::Manager,
             UserRole::Salesperson,
+            UserRole::Warehouse,
+        ], true);
+    }
+
+    public static function canApproveReturns(UserRole $role): bool
+    {
+        return in_array($role, [
+            UserRole::Admin,
+            UserRole::Manager,
+            UserRole::Salesperson,
+            UserRole::Warehouse,
+        ], true);
+    }
+
+    public static function canCreatePurchases(UserRole $role): bool
+    {
+        return in_array($role, [
+            UserRole::Admin,
+            UserRole::Manager,
+            UserRole::Warehouse,
         ], true);
     }
 }

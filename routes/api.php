@@ -98,7 +98,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->middleware('role:admin');
         Route::get('/customers/{id}/invoices', [CustomerController::class, 'invoices']);
         Route::get('/customers/{id}/balance', [CustomerController::class, 'balance']);
-        Route::post('/customers/{id}/payments', [CustomerController::class, 'collectPayment'])->middleware('role:admin,manager,salesperson');
+        Route::post('/customers/{id}/payments', [CustomerController::class, 'collectPayment'])->middleware('role:admin,manager,salesperson,warehouse');
         Route::patch('/customers/{id}/payments/{paymentId}', [CustomerController::class, 'updatePayment'])->middleware('role:admin');
         Route::put('/customers/{id}/payments/{paymentId}', [CustomerController::class, 'updatePayment'])->middleware('role:admin');
         Route::get('/customers/{id}/payments', [CustomerController::class, 'payments']);
@@ -114,7 +114,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/invoices/{id}/cancel', [InvoiceController::class, 'cancel'])->middleware('role:admin,manager');
 
         Route::get('/settlements', [SettlementController::class, 'index']);
-        Route::post('/settlements', [SettlementController::class, 'store'])->middleware('role:admin,manager');
+        Route::post('/settlements', [SettlementController::class, 'store'])->middleware('role:admin,manager,salesperson,warehouse');
         Route::get('/settlements/upcoming', [SettlementController::class, 'upcoming']);
         Route::get('/settlements/{id}', [SettlementController::class, 'show']);
 
@@ -130,7 +130,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/suppliers/{id}/payments', [SupplierController::class, 'payments']);
 
         Route::get('/purchases', [PurchaseController::class, 'index']);
-        Route::post('/purchases', [PurchaseController::class, 'store'])->middleware('role:admin,manager');
+        Route::post('/purchases', [PurchaseController::class, 'store'])->middleware('role:admin,manager,warehouse');
         Route::get('/purchases/{id}', [PurchaseController::class, 'show']);
         Route::patch('/purchases/{id}/receive', [PurchaseController::class, 'receive'])->middleware('role:admin,manager,warehouse');
         Route::post('/purchases/{id}/receive', [PurchaseController::class, 'receive'])->middleware('role:admin,manager,warehouse');
@@ -143,8 +143,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/returns', [ProductReturnController::class, 'index']);
         Route::post('/returns', [ProductReturnController::class, 'store']);
         Route::get('/returns/{id}', [ProductReturnController::class, 'show']);
-        Route::patch('/returns/{id}/approve', [ProductReturnController::class, 'approve'])->middleware('role:admin,manager');
-        Route::patch('/returns/{id}/reject', [ProductReturnController::class, 'reject'])->middleware('role:admin,manager');
+        Route::patch('/returns/{id}/approve', [ProductReturnController::class, 'approve'])->middleware('role:admin,manager,salesperson,warehouse');
+        Route::patch('/returns/{id}/reject', [ProductReturnController::class, 'reject'])->middleware('role:admin,manager,salesperson,warehouse');
 
         Route::prefix('dashboard')->middleware('role:admin,manager')->group(function () {
             Route::get('/summary', [DashboardController::class, 'summary']);

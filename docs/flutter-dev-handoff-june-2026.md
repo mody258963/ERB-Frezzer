@@ -46,7 +46,19 @@ After login, read **`GET /api/v1/auth/me`** — new boolean flags:
 | `accessible_branch_ids` | all active branches | `[branch_id]` | `[branch_id]` | `[branch_id]` |
 | `can_cash_out_profit` | ✓ | ✗ | ✗ | ✗ |
 | `can_pay_suppliers` | ✓ | ✓ | ✓ | ✓ |
-| `can_collect_customer_payments` | ✓ | ✓ | ✓ | ✗ |
+| `can_collect_customer_payments` | ✓ | ✓ | ✓ | ✓ |
+| `can_approve_returns` | ✓ | ✓ | ✓ | ✓ |
+| `can_create_purchases` | ✓ | ✓ | ✗ | ✓ |
+
+### Client feedback — warehouse & salesperson (July 2026)
+
+| Client report | Backend fix | Flutter |
+|---------------|-------------|---------|
+| Can't collect credit customer payments | `POST /customers/{id}/payments`, `POST /settlements` → salesperson + warehouse | `can_collect_customer_payments` |
+| Can't pay suppliers | `POST /suppliers/{id}/payments` → salesperson + warehouse | `can_pay_suppliers` + `GET /suppliers/payables/by-supplier` |
+| Can't approve return + cash refund | `PATCH /returns/{id}/approve` `{ "resolution": "refund_cash" }` → salesperson + warehouse | `can_approve_returns` |
+| Supply permit — products missing | `POST /purchases` → warehouse; parts list includes stock in branch | `can_create_purchases`; refresh `GET /parts` |
+| Issues on all accounts | Role middleware bug fixed (`admin,manager,...` now checks every role) | Redeploy backend |
 
 ### Flutter UI rules
 

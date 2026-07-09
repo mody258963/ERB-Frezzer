@@ -36,6 +36,8 @@ final class UserTransformer
             'can_cash_out_profit' => RolePermissions::canCashOutProfit($user->role),
             'can_pay_suppliers' => RolePermissions::canPaySuppliers($user->role),
             'can_collect_customer_payments' => RolePermissions::canCollectCustomerPayments($user->role),
+            'can_approve_returns' => RolePermissions::canApproveReturns($user->role),
+            'can_create_purchases' => RolePermissions::canCreatePurchases($user->role),
         ];
 
         if ($user->relationLoaded('branch') && $user->branch) {
