@@ -130,6 +130,80 @@ class PartBranchWarehouseTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/parts?branch_id='.$branchB->id, $payload)->assertCreated();
     }
 
+    public function test_create_part_rejects_code_used_by_inactive_part_in_same_branch(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(PartCategorySeeder::class);
+
+        $branch = Branch::query()->firstOrFail();
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $payload = [
+            'code' => 'INACTIVE-CODE',
+            'name' => 'Previously Used Code',
+            'category_key' => 'compressor',
+            'unit' => 'pc',
+            'sell_price' => 100,
+            'cost_price' => 50,
+            'min_stock' => 0,
+        ];
+
+        $partId = $this->withToken($token)
+            ->postJson('/api/v1/parts?branch_id='.$branch->id, $payload)
+            ->assertCreated()
+            ->json('id');
+        $this->withToken($token)->deleteJson('/api/v1/parts/'.$partId)->assertNoContent();
+
+        $this->withToken($token)
+            ->postJson('/api/v1/parts?branch_id='.$branch->id, $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['code']);
+    }
+
+    public function test_update_part_rejects_code_used_by_inactive_part_in_same_branch(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(PartCategorySeeder::class);
+
+        $branch = Branch::query()->firstOrFail();
+        $token = (string) $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ])->json('token');
+
+        $payload = [
+            'code' => 'INACTIVE-CODE',
+            'name' => 'Previously Used Code',
+            'category_key' => 'compressor',
+            'unit' => 'pc',
+            'sell_price' => 100,
+            'cost_price' => 50,
+            'min_stock' => 0,
+        ];
+
+        $inactivePartId = $this->withToken($token)
+            ->postJson('/api/v1/parts?branch_id='.$branch->id, $payload)
+            ->assertCreated()
+            ->json('id');
+        $this->withToken($token)->deleteJson('/api/v1/parts/'.$inactivePartId)->assertNoContent();
+
+        $targetId = $this->withToken($token)
+            ->postJson('/api/v1/parts?branch_id='.$branch->id, array_merge($payload, [
+                'code' => 'UPDATE-TARGET',
+                'name' => 'Update Target',
+            ]))
+            ->assertCreated()
+            ->json('id');
+
+        $this->withToken($token)
+            ->putJson('/api/v1/parts/'.$targetId, ['code' => 'INACTIVE-CODE'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['code']);
+    }
+
     public function test_create_part_without_branch_returns_validation_error(): void
     {
         $this->seed(DatabaseSeeder::class);
